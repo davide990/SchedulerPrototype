@@ -22,8 +22,9 @@ public class PlanImpl implements Plan, Executable {
 	@Override
 	public void addTask(Task t) {
 		Objects.requireNonNull(t);
-
-		tasks.putIfAbsent(t.taskID, t);
+		if (tasks.putIfAbsent(t.taskID, t) == null) {
+			throw new IllegalArgumentException("Task is already in plan");
+		}
 	}
 
 	@Override

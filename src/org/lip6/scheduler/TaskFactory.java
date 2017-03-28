@@ -3,7 +3,7 @@ package org.lip6.scheduler;
 import java.util.function.Function;
 
 public class TaskFactory {
-	public static Executable getSimpleTask(int taskID, int planID, int releaseTime, int processingTime, int[] successors) {
+	public static Task getSimpleTask(int taskID, int planID, int releaseTime, int processingTime, int[] successors) {
 
 		if (processingTime <= 0)
 			throw new IllegalArgumentException("Processing time must be >= 0.");
@@ -19,7 +19,7 @@ public class TaskFactory {
 		};
 	}
 
-	public static Executable getTask(int taskID, int planID, int releaseTime, int processingTime, int[] successors,
+	public static Task getTask(int taskID, int planID, int releaseTime, int processingTime, int[] successors,
 			Function<String[], Void> executionFunction) {
 
 		if (processingTime <= 0)

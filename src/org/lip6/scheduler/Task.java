@@ -32,8 +32,8 @@ public class Task implements Executable {
 		return releaseTime;
 	}
 
-	public void setReleaseTime(int releaseTime) {
-		this.releaseTime = releaseTime;
+	public void updateReleaseTime(int deltaReleaseTime) {
+		this.releaseTime += releaseTime;
 	}
 
 	public int getProcessingTime() {
