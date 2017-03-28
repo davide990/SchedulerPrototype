@@ -2,18 +2,40 @@ package org.lip6.scheduler;
 
 public class TaskImpl implements Task {
 
-	int taskID;
-	int planID;
+	final int taskID;
+	final int planID;
 	int releaseTime;
-	int processingTime;
+	final int processingTime;
 
 	public TaskImpl(int taskID, int planID, int releaseTime, int processingTime) {
+		this.taskID = taskID;
+		this.planID = planID;
+		this.releaseTime = releaseTime;
+		this.processingTime = processingTime;
 	}
 
 	@Override
 	public void execute(String[] args) {
-		// TODO Auto-generated method stub
+	}
 
+	public int getTaskID() {
+		return taskID;
+	}
+
+	public int getPlanID() {
+		return planID;
+	}
+
+	public int getReleaseTime() {
+		return releaseTime;
+	}
+
+	public void setReleaseTime(int releaseTime) {
+		this.releaseTime = releaseTime;
+	}
+
+	public int getProcessingTime() {
+		return processingTime;
 	}
 
 }

@@ -14,7 +14,7 @@ public class TaskFactory {
 		return new TaskImpl(taskID, planID, releaseTime, processingTime) {
 			@Override
 			public void execute(String[] args) {
-				super.execute(args);
+				throw new UnsupportedOperationException("Not available");
 			}
 		};
 	}
