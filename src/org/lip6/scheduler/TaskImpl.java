@@ -6,12 +6,14 @@ public class TaskImpl implements Task {
 	final int planID;
 	int releaseTime;
 	final int processingTime;
+	final int[] successors;
 
-	public TaskImpl(int taskID, int planID, int releaseTime, int processingTime) {
+	public TaskImpl(int taskID, int planID, int releaseTime, int processingTime, int[] successors) {
 		this.taskID = taskID;
 		this.planID = planID;
 		this.releaseTime = releaseTime;
 		this.processingTime = processingTime;
+		this.successors = successors;
 	}
 
 	@Override

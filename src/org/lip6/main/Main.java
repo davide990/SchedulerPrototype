@@ -7,7 +7,7 @@ public class Main {
 
 	public static void main(String[] args) {
 
-		Task t1 = TaskFactory.getTask(0, 0, 0, 0, (String[] arg) -> {
+		Task t1 = TaskFactory.getTask(0, 0, 0, 0, new int[] { 1, 2 }, (String[] arg) -> {
 			System.out.println("hello");
 			return null;
 		});
