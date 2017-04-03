@@ -1,8 +1,8 @@
 package org.lip6.scheduler;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -79,8 +79,8 @@ public class PlanImpl implements Plan, Executable {
 	}
 
 	@Override
-	public Map<Integer, Executable> tasks() {
-		return Collections.unmodifiableMap(tasks);
+	public Collection<Task> tasks() {
+		return Collections.unmodifiableCollection(tasks.values());
 
 	}
 

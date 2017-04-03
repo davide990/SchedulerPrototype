@@ -7,9 +7,6 @@ import org.junit.Test;
 import org.lip6.scheduler.TaskFactory;
 
 public class TaskTest {
-	// Quando creo un task,
-	// la sua processing time deve essere > 0
-	// la sua starting time deve essere > 0
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testProcessingTime() {

@@ -1,11 +1,11 @@
 package org.lip6.scheduler;
 
-import java.util.Map;
+import java.util.Collection;
 
 public interface Plan {
 	void addTask(Task t);
 
-	Map<Integer, Executable> tasks();
+	Collection<Task> tasks();
 
 	Executable getTask(int taskID);
 
