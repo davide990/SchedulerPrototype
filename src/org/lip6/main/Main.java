@@ -13,7 +13,7 @@ public class Main {
 			return null;
 		});
 
-		PlanImpl plan = new PlanImpl(0);
+		PlanImpl plan = PlanImpl.get(0, 0);
 		plan.addTask(t1);
 
 		plan.execute(args);

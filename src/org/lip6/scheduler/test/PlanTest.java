@@ -9,7 +9,7 @@ public class PlanTest {
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testDuplicateTask() {
-		PlanImpl plan = new PlanImpl(0);
+		PlanImpl plan = PlanImpl.get(0, 0);
 		Task t1 = TaskFactory.getTask(0, 0, 0, 1, new int[] { 1, 2 }, (String[] arg) -> {
 			System.out.println("hello");
 			return null;

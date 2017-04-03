@@ -9,6 +9,10 @@ public interface Plan {
 
 	Executable getTask(int taskID);
 
+	int getPriority();
+	int getExecutionTime();
+	int getNumberOfTasks();
+	
 	void updateTask(Task t);
 
 	boolean isSchedulable();
