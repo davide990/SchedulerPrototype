@@ -7,13 +7,17 @@ public class Task implements Executable {
 
 	final int taskID;
 	final int planID;
+	final int resourceID;
 	int releaseTime;
 	final int processingTime;
 	final List<Integer> predecessors;
 
-	public Task(int taskID, int planID, int releaseTime, int processingTime, List<Integer> predecessors) {
+	public Task(int taskID, int planID, int resourceID, int releaseTime, int processingTime,
+			List<Integer> predecessors) {
+		super();
 		this.taskID = taskID;
 		this.planID = planID;
+		this.resourceID = resourceID;
 		this.releaseTime = releaseTime;
 		this.processingTime = processingTime;
 		this.predecessors = predecessors;

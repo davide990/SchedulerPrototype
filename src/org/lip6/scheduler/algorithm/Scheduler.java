@@ -13,6 +13,9 @@ public class Scheduler {
 	public static void scheduleTask(Task t, Schedule s) {
 
 		int startingTime = 0;
+		//s.getDueDateForLastTaskIn(t.)
+		
+		
 		/*for (Plan p : s.plans()) {
 			for (Task tt : p.tasks()) {
 

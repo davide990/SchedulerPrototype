@@ -65,7 +65,12 @@ public class Schedule implements Executable {
 		lastTaskForResource.put(resouceID, s);
 	}
 
-	public int getDeadlineForLastTaskIn(int resource) {
+	/**
+	 * Returns the due date of the last task allocated for the specified resource, or -1 if there's no task allocated for it.
+	 * @param resource the ID of the resource
+	 * @return
+	 */
+	public int getDueDateForLastTaskIn(int resource) {
 		if (lastTaskForResource.containsKey(resource)) {
 			ScheduleAssignment s = lastTaskForResource.get(resource);
 			return s.getStartingTime() + s.getTask().getProcessingTime();
