@@ -5,25 +5,29 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Schedule implements Executable {
-	private int WStart;
-	private int WEnd;
+	private final int WStart;
+	private final int WEnd;
 	private final LinkedHashMap<Integer, PlanImpl> plans = new LinkedHashMap<>();
 
 	private final static Logger logger = Logger.getLogger(PlanImpl.class.getName());
 
-	public Schedule(int wStart, int wEnd) {
+	private Schedule(int wStart, int wEnd) {
 		WStart = wStart;
 		WEnd = wEnd;
 	}
 
 	public static Schedule get(int WStart, int WEnd) {
-
 		requireValidBounds(WStart, 0, Integer.MAX_VALUE);
 		requireValidBounds(WEnd, WStart + 1, Integer.MAX_VALUE);
+		return new Schedule(WStart, WEnd);
+	}
 
-		Schedule schedule = new Schedule(WStart, WEnd);
+	public int getWStart() {
+		return WStart;
+	}
 
-		return schedule;
+	public int getWEnd() {
+		return WEnd;
 	}
 
 	private static int requireValidBounds(int value, int min, int max) {
