@@ -11,6 +11,8 @@ public class PlanImpl implements Plan, Executable {
 
 	private final int ID;
 
+	private boolean schedulable;
+
 	final LinkedHashMap<Integer, Executable> tasks = new LinkedHashMap<>();
 
 	private final static Logger logger = Logger.getLogger(PlanImpl.class.getName());
@@ -22,7 +24,7 @@ public class PlanImpl implements Plan, Executable {
 	@Override
 	public void addTask(Task t) {
 		Objects.requireNonNull(t);
-		if (tasks.putIfAbsent(t.taskID, t) == null) {
+		if (tasks.putIfAbsent(t.taskID, t) != null) {
 			throw new IllegalArgumentException("Task is already in plan");
 		}
 	}
@@ -44,6 +46,16 @@ public class PlanImpl implements Plan, Executable {
 	}
 
 	@Override
+	public boolean isSchedulable() {
+		return schedulable;
+	}
+
+	@Override
+	public void setSchedulable(boolean schedulable) {
+		this.schedulable = schedulable;
+	}
+
+	@Override
 	public void execute(String[] args) {
 		logger.log(Level.FINEST, "Executing plan [" + ID + "]");
 		tasks.forEach((k, v) -> {
@@ -52,7 +64,4 @@ public class PlanImpl implements Plan, Executable {
 		});
 	}
 
-	
-	
-	
 }

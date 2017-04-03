@@ -10,4 +10,8 @@ public interface Plan {
 	Executable getTask(int taskID);
 
 	void updateTask(Task t);
+
+	boolean isSchedulable();
+
+	void setSchedulable(boolean schedulable);
 }
