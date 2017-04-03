@@ -1,5 +1,8 @@
 package org.lip6.scheduler.algorithm;
 
+import org.lip6.scheduler.Schedule;
+import org.lip6.scheduler.Task;
+
 public class Scheduler {
 	
 	public static void checkConstraints()
@@ -7,7 +10,7 @@ public class Scheduler {
 		
 	}
 	
-	public static void scheduleTask()
+	public static void scheduleTask(Task t, Schedule s)
 	{
 		
 	}

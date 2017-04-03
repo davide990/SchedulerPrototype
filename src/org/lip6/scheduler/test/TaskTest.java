@@ -1,5 +1,8 @@
 package org.lip6.scheduler.test;
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.junit.Test;
 import org.lip6.scheduler.TaskFactory;
 
@@ -14,7 +17,8 @@ public class TaskTest {
 		int taskID = 0;
 		int planID = 0;
 		int releaseTime = -1;
-		int[] successors = new int[] { 1, 2 };
+		List<Integer> successors = Arrays.asList(1, 2);
+
 		TaskFactory.getNonExecutableTask(taskID, planID, releaseTime, processingTime, successors);
 	}
 
@@ -24,7 +28,7 @@ public class TaskTest {
 		int planID = 0;
 		int releaseTime = 0;
 		int processingTime = -1;
-		int[] successors = new int[] { 1, 2 };
+		List<Integer> successors = Arrays.asList(1, 2);
 		TaskFactory.getNonExecutableTask(taskID, planID, releaseTime, processingTime, successors);
 	}
 
