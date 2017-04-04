@@ -14,7 +14,6 @@ public class Task implements Executable {
 
 	public Task(int taskID, int planID, int resourceID, int releaseTime, int processingTime,
 			List<Integer> predecessors) {
-		super();
 		this.taskID = taskID;
 		this.planID = planID;
 		this.resourceID = resourceID;
@@ -25,6 +24,10 @@ public class Task implements Executable {
 
 	@Override
 	public void execute(String[] args) {
+	}
+
+	public int getResourceID() {
+		return resourceID;
 	}
 
 	public int getTaskID() {
@@ -60,9 +63,6 @@ public class Task implements Executable {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + planID;
-		result = prime * result + ((predecessors == null) ? 0 : predecessors.hashCode());
-		result = prime * result + processingTime;
-		result = prime * result + releaseTime;
 		result = prime * result + taskID;
 		return result;
 	}
@@ -77,15 +77,6 @@ public class Task implements Executable {
 			return false;
 		Task other = (Task) obj;
 		if (planID != other.planID)
-			return false;
-		if (predecessors == null) {
-			if (other.predecessors != null)
-				return false;
-		} else if (!predecessors.equals(other.predecessors))
-			return false;
-		if (processingTime != other.processingTime)
-			return false;
-		if (releaseTime != other.releaseTime)
 			return false;
 		if (taskID != other.taskID)
 			return false;

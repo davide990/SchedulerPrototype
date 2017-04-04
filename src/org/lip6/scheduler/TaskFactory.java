@@ -14,12 +14,7 @@ public class TaskFactory {
 			throw new IllegalArgumentException("Release time must be > 0.");
 		}
 
-		return new Task(taskID, planID, resourceID, releaseTime, processingTime, predecessors) {
-			@Override
-			public void execute(String[] args) {
-				throw new UnsupportedOperationException("Not available");
-			}
-		};
+		return new Task(taskID, planID, resourceID, releaseTime, processingTime, predecessors);
 	}
 
 	public static Task getTask(int taskID, int planID, int resourceID, int releaseTime, int processingTime,

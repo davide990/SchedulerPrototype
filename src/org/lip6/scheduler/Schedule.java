@@ -9,6 +9,8 @@ import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.lip6.scheduler.utils.Utils;
+
 public class Schedule implements Executable {
 
 	private final int numResources;
@@ -34,8 +36,8 @@ public class Schedule implements Executable {
 	}
 
 	public static Schedule get(int numResources, int WStart, int WEnd) {
-		requireValidBounds(WStart, 0, Integer.MAX_VALUE);
-		requireValidBounds(WEnd, WStart + 1, Integer.MAX_VALUE);
+		Utils.requireValidBounds(WStart, 0, Integer.MAX_VALUE);
+		Utils.requireValidBounds(WEnd, WStart + 1, Integer.MAX_VALUE);
 		return new Schedule(numResources, WStart, WEnd);
 	}
 
@@ -47,27 +49,23 @@ public class Schedule implements Executable {
 		return WEnd;
 	}
 
-	private static int requireValidBounds(int value, int min, int max) {
-		if (value < min || value > max) {
-			throw new IllegalArgumentException("Value " + value + " is not valid.");
-		}
-		return value;
-	}
-
-	public void add(int resouceID, int startingTime, Task t) {
+	public void add(int startingTime, Task t) {
 		Objects.requireNonNull(t, "Task cannot be null");
 
-		ScheduleAssignment s = new ScheduleAssignment(t, startingTime, resouceID);
+		ScheduleAssignment s = new ScheduleAssignment(t, startingTime, t.getResourceID());
 		schedule.add(s);
 		if (!plans.contains(t.planID)) {
 			plans.add(t.planID);
 		}
-		lastTaskForResource.put(resouceID, s);
+		lastTaskForResource.put(t.getResourceID(), s);
 	}
 
 	/**
-	 * Returns the due date of the last task allocated for the specified resource, or -1 if there's no task allocated for it.
-	 * @param resource the ID of the resource
+	 * Returns the due date of the last task allocated for the specified
+	 * resource, or WStart if there's no task allocated for it.
+	 * 
+	 * @param resource
+	 *            the ID of the resource
 	 * @return
 	 */
 	public int getDueDateForLastTaskIn(int resource) {
@@ -76,7 +74,7 @@ public class Schedule implements Executable {
 			return s.getStartingTime() + s.getTask().getProcessingTime();
 		}
 
-		return -1;
+		return WStart;
 	}
 
 	public List<Integer> plans() {
