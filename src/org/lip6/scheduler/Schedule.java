@@ -24,7 +24,7 @@ public class Schedule implements Executable {
 	private final List<Integer> plans;
 	private final List<ScheduleAssignment> schedule;
 
-	private final static Logger logger = Logger.getLogger(PlanImpl.class.getName());
+	private final static Logger logger = Logger.getLogger(Schedule.class.getName());
 
 	private Schedule(int numResources, int wStart, int wEnd) {
 		this.numResources = numResources;
@@ -75,6 +75,10 @@ public class Schedule implements Executable {
 		}
 
 		return WStart;
+	}
+
+	public List<ScheduleAssignment> assignments() {
+		return Collections.unmodifiableList(schedule);
 	}
 
 	public List<Integer> plans() {

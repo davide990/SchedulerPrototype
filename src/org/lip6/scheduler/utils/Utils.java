@@ -7,4 +7,11 @@ public class Utils {
 		}
 		return value;
 	}
+
+	public static int requireValidBounds(int value, int min, int max, String message) {
+		if (value < min || value > max) {
+			throw new IllegalArgumentException(message);
+		}
+		return value;
+	}
 }
