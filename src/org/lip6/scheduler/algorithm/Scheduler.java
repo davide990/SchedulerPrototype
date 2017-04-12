@@ -1,6 +1,7 @@
 package org.lip6.scheduler.algorithm;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -14,9 +15,48 @@ import org.lip6.scheduler.PlanImpl;
 import org.lip6.scheduler.Schedule;
 import org.lip6.scheduler.TaskSchedule;
 import org.lip6.scheduler.Task;
+import org.lip6.scheduler.TaskFactory;
 import org.lip6.scheduler.utils.Utils;
 
 public class Scheduler {
+
+	public static void main(String[] args) {
+		List<PlanImpl> plans = new ArrayList<>();
+		List<Function<PlanImpl, Integer>> criteria = new ArrayList<>();
+		List<Float> weights = new ArrayList<>();
+
+		PlanImpl p0 = PlanImpl.get(0, 5);
+		PlanImpl p1 = PlanImpl.get(1, 9);
+		PlanImpl p2 = PlanImpl.get(2, 2);
+
+		p0.addTask(TaskFactory.getTask(0, 0, 0, 2, 5));
+		p0.addTask(TaskFactory.getTask(1, 0, 0, 6, 8));
+		p0.addTask(TaskFactory.getTask(2, 0, 0, 9, 14));
+
+		p1.addTask(TaskFactory.getTask(3, 1, 0, 1, 3));
+		p1.addTask(TaskFactory.getTask(4, 1, 0, 1, 6));
+
+		p2.addTask(TaskFactory.getTask(5, 2, 0, 6, 9));
+		p2.addTask(TaskFactory.getTask(6, 2, 0, 10, 15));
+
+		plans.add(p1);
+		plans.add(p2);
+		plans.add(p0);
+
+		criteria.add(PlanImpl::getPriority);
+		weights.add(1f);
+		criteria.add(PlanImpl::getNumberOfTasks);
+		weights.add(0.1f);
+		criteria.add(PlanImpl::getExecutionTime);
+		weights.add(0.01f);
+
+		System.out.println("SET OF PLANS:");
+		plans.forEach(p -> {
+			System.out.println("---> " + p.getID());
+		});
+
+		buildSchedule(plans, criteria, weights);
+	}
 
 	/**
 	 * ALGORITHM 1
@@ -28,7 +68,7 @@ public class Scheduler {
 			List<Float> weights) {
 
 		// The sorted set P of plans.
-		Queue<PlanImpl> plansQueue = new PriorityQueue<>(new Comparator<Plan>() {
+		Queue<Plan> plansQueue = new PriorityQueue<>(new Comparator<Plan>() {
 			@Override
 			public int compare(Plan o1, Plan o2) {
 				return Float.compare(o1.getScore(), o2.getScore());
@@ -45,6 +85,12 @@ public class Scheduler {
 		// Once calculated the score, each plan is inserted in order to the
 		// priority queue
 		plans.forEach(p -> plansQueue.add(p));
+
+		System.out.println("SORTED SET OF PLANS:");
+		while (!plansQueue.isEmpty()) {
+			Plan p = plansQueue.poll();
+			System.out.println("---> " + p.getID() + " [score: " + p.getScore() + "]");
+		}
 
 		// [TODO] MAIN LOOP
 
@@ -80,6 +126,7 @@ public class Scheduler {
 			for (int i = 0; i < weights.size(); i++) {
 				score += criteria.get(i).apply(plan) * weights.get(i);
 			}
+			plan.setScore(score);
 			scores.add(score);
 		}
 

@@ -9,6 +9,8 @@ public interface Plan {
 
 	Executable getTask(int taskID);
 
+	int getID();
+	
 	int getPriority();
 	
 	int getInversePriority();

@@ -40,6 +40,11 @@ public class PlanImpl implements Plan, Executable {
 	}
 
 	@Override
+	public int getID() {
+		return ID;
+	}
+
+	@Override
 	public int getPriority() {
 		return priority;
 	}
@@ -86,6 +91,10 @@ public class PlanImpl implements Plan, Executable {
 		Objects.requireNonNull(t);
 		if (tasks.putIfAbsent(t.taskID, t) != null) {
 			throw new IllegalArgumentException("Task is already in plan");
+		}
+
+		if (t.planID != ID) {
+			throw new IllegalArgumentException("Task ID is different from plan ID.");
 		}
 
 		// Update the execution time of this plan
