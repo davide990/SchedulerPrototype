@@ -3,7 +3,7 @@ package org.lip6.scheduler;
 import java.util.Collections;
 import java.util.List;
 
-public class Task implements Executable {
+public class Task implements Executable, Cloneable {
 
 	final int taskID;
 	final int planID;
@@ -20,6 +20,11 @@ public class Task implements Executable {
 		this.releaseTime = releaseTime;
 		this.processingTime = processingTime;
 		this.predecessors = predecessors;
+	}
+
+	@Override
+	protected Object clone() throws CloneNotSupportedException {
+		return TaskFactory.getTask(taskID, planID, resourceID, releaseTime, processingTime, predecessors);
 	}
 
 	@Override
@@ -81,6 +86,11 @@ public class Task implements Executable {
 		if (taskID != other.taskID)
 			return false;
 		return true;
+	}
+
+	@Override
+	public String toString() {
+		return "Task [taskID=" + taskID + ", planID=" + planID + "]";
 	}
 
 }

@@ -1,7 +1,6 @@
 package org.lip6.scheduler.algorithm;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -21,6 +20,8 @@ import org.lip6.scheduler.utils.Utils;
 public class Scheduler {
 
 	public static void main(String[] args) {
+		int WStart = 2;
+		int WEnd = 9;
 		List<PlanImpl> plans = new ArrayList<>();
 		List<Function<PlanImpl, Integer>> criteria = new ArrayList<>();
 		List<Float> weights = new ArrayList<>();
@@ -55,7 +56,9 @@ public class Scheduler {
 			System.out.println("---> " + p.getID());
 		});
 
-		buildSchedule(plans, criteria, weights);
+		Schedule s = buildSchedule(plans, criteria, weights, WStart, WEnd);
+
+		System.out.println("Scheduled plans: " + s.plans().size() + " of " + plans.size());
 	}
 
 	/**
@@ -64,16 +67,23 @@ public class Scheduler {
 	 * @param t
 	 * @param s
 	 */
-	public static void buildSchedule(List<PlanImpl> plans, List<Function<PlanImpl, Integer>> criteria,
-			List<Float> weights) {
+	public static Schedule buildSchedule(List<PlanImpl> plans, List<Function<PlanImpl, Integer>> criteria,
+			List<Float> weights, int WStart, int WEnd) {
 
-		// The sorted set P of plans.
-		Queue<Plan> plansQueue = new PriorityQueue<>(new Comparator<Plan>() {
+		Schedule workingSolution = Schedule.get(1, WStart, WEnd);
+		Schedule lastFeasibleSolution = Schedule.get(1, WStart, WEnd);
+
+		Comparator<Plan> comparator = new Comparator<Plan>() {
 			@Override
 			public int compare(Plan o1, Plan o2) {
 				return Float.compare(o1.getScore(), o2.getScore());
 			}
-		});
+		};
+
+		// The sorted set P of plans.
+		Queue<Plan> plansQueue = new PriorityQueue<>(comparator);
+		Queue<Plan> scheduledPlans = new PriorityQueue<>(comparator);
+		Queue<Plan> unscheduledPlans = new PriorityQueue<>(comparator);
 
 		// Calculate the inverse priority for each plan
 		int maxPriority = Collections.max(plans.stream().map(PlanImpl::getPriority).collect(Collectors.toList()));
@@ -86,31 +96,33 @@ public class Scheduler {
 		// priority queue
 		plans.forEach(p -> plansQueue.add(p));
 
-		System.out.println("SORTED SET OF PLANS:");
+		// MAIN LOOP
 		while (!plansQueue.isEmpty()) {
-			Plan p = plansQueue.poll();
-			System.out.println("---> " + p.getID() + " [score: " + p.getScore() + "]");
+			Plan pk = plansQueue.poll();
+			for (Task t : pk.tasks()) {
+				if (checkConstraints(t, workingSolution)) {
+					scheduleTask(t, workingSolution);
+				} else {
+					pk.setSchedulable(false);
+				}
+			}
+
+			if (pk.isSchedulable()) {
+				try {
+					lastFeasibleSolution = (Schedule) workingSolution.clone();
+				} catch (CloneNotSupportedException e) {
+					e.printStackTrace();
+				}
+
+				// push pk into the queue of scheduled plans
+				scheduledPlans.add(pk);
+			} else {
+				unscheduledPlans.add(pk);
+			}
+
 		}
 
-		// [TODO] MAIN LOOP
-
-	}
-
-	public static List<Float> calculatePlanScore(List<PlanImpl> plans, List<Float> weights) {
-		List<Float> scores = new ArrayList<>();
-		int maxPriority = Collections.max(plans.stream().map(PlanImpl::getPriority).collect(Collectors.toList()));
-
-		for (PlanImpl plan : plans) {
-			float score = 0;
-			// inverse of priority
-			score += (1 + maxPriority - plan.getPriority()) * weights.get(0);
-			score += plan.getExecutionTime() * weights.get(1);
-			score += plan.getNumberOfTasks() * weights.get(2);
-			plan.setScore(score);
-			scores.add(score);
-		}
-
-		return scores;
+		return lastFeasibleSolution;
 	}
 
 	public static List<Float> calculatePlanScore(List<PlanImpl> plans, List<Function<PlanImpl, Integer>> criteria,
@@ -133,20 +145,8 @@ public class Scheduler {
 		return scores;
 	}
 
-	private static boolean schedulePlan(PlanImpl plan, Schedule s) {
-		for (Task t : plan.tasks()) {
-			if (checkConstraints(t, s)) {
-				scheduleTask(t, s);
-			} else {
-				plan.setSchedulable(false);
-			}
-		}
-		plan.setSchedulable(true);
-		return plan.isSchedulable();
-	}
-
 	/**
-	 * ALGORITHM 2
+	 * ALGORITHM 3
 	 * 
 	 * @param t
 	 * @param s
@@ -158,13 +158,14 @@ public class Scheduler {
 		// [rk,dk]e che a sua volta s e s+p siano dentro W
 		int startingTime = Math.max(t.getReleaseTime(), s.getDueDateForLastTaskIn(t.getResourceID()) + 1);
 		try {
-			Utils.requireValidBounds(startingTime, s.getWStart(), s.getWEnd(),
-					"for task [" + t.toString() + "]: starting time" + startingTime + " not in [rk,dk]");
-
 			Utils.requireValidBounds(startingTime, t.getReleaseTime(), t.getDueDate(),
-					"for task [" + t.toString() + "]: starting time" + startingTime + "not in window ["
-							+ t.getReleaseTime() + "," + t.getDueDate() + "]");
+					"for " + t.toString() + ": starting time " + startingTime + " not in [rk=" + t.getReleaseTime()
+							+ ",dk=" + t.getDueDate() + "]");
+
+			Utils.requireValidBounds(startingTime, s.getWStart(), s.getWEnd(), "for " + t.toString()
+					+ ": starting time " + startingTime + " not in window [" + s.getWStart() + "," + s.getWEnd() + "]");
 		} catch (IllegalArgumentException e) {
+			System.out.println(e.getMessage());
 			return false;
 		}
 
@@ -185,7 +186,7 @@ public class Scheduler {
 	}
 
 	/**
-	 * ALGORITHM 3
+	 * ALGORITHM 2
 	 * 
 	 * @param t
 	 * @param s

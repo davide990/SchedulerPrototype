@@ -11,7 +11,7 @@ import java.util.logging.Logger;
 
 import org.lip6.scheduler.utils.Utils;
 
-public class Schedule implements Executable {
+public class Schedule implements Executable, Cloneable {
 
 	private final int numResources;
 	private final int WStart;
@@ -48,6 +48,32 @@ public class Schedule implements Executable {
 
 	public int getWEnd() {
 		return WEnd;
+	}
+
+	@Override
+	public Object clone() throws CloneNotSupportedException {
+		Schedule s = Schedule.get(numResources, WStart, WEnd);
+
+		lastTaskForResource.forEach((k, v) -> {
+			try {
+				s.lastTaskForResource.put(k, (TaskSchedule) v.clone());
+
+			} catch (CloneNotSupportedException e) {
+				e.printStackTrace();
+			}
+		});
+		
+		schedule.forEach(sc -> {
+			try {
+				s.schedule.add((TaskSchedule) sc.clone());
+			} catch (CloneNotSupportedException e) {
+				e.printStackTrace();
+			}
+		});
+		
+		plans.forEach(p -> s.plans.add(p));
+		
+		return s;
 	}
 
 	public void add(int startingTime, Task t) {

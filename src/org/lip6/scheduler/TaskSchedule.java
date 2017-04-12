@@ -1,6 +1,6 @@
 package org.lip6.scheduler;
 
-public class TaskSchedule {
+public class TaskSchedule implements Cloneable {
 	private final Task task;
 	private final int startingTime;
 	private final int resource;
@@ -9,6 +9,11 @@ public class TaskSchedule {
 		this.task = task;
 		this.startingTime = startingTime;
 		this.resource = resource;
+	}
+
+	@Override
+	protected Object clone() throws CloneNotSupportedException {
+		return new TaskSchedule((Task) task.clone(), startingTime, resource);
 	}
 
 	public Task getTask() {
