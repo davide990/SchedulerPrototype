@@ -17,7 +17,7 @@ public class TaskTest {
 		int releaseTime = -1;
 		List<Integer> successors = Arrays.asList(1, 2);
 
-		TaskFactory.getNonExecutableTask(taskID, planID, resourceID, releaseTime, processingTime, successors);
+		TaskFactory.getTask(taskID, planID, resourceID, releaseTime, processingTime, successors);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -28,7 +28,7 @@ public class TaskTest {
 		int releaseTime = 0;
 		int processingTime = -1;
 		List<Integer> successors = Arrays.asList(1, 2);
-		TaskFactory.getNonExecutableTask(taskID, planID, resourceID, releaseTime, processingTime, successors);
+		TaskFactory.getTask(taskID, planID, resourceID, releaseTime, processingTime, successors);
 	}
 
 }

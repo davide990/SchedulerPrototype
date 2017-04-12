@@ -1,11 +1,13 @@
 package org.lip6.scheduler.algorithm;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.lip6.scheduler.PlanImpl;
 import org.lip6.scheduler.Schedule;
-import org.lip6.scheduler.ScheduleAssignment;
+import org.lip6.scheduler.TaskSchedule;
 import org.lip6.scheduler.Task;
 import org.lip6.scheduler.utils.Utils;
 
@@ -17,8 +19,24 @@ public class Scheduler {
 	 * @param t
 	 * @param s
 	 */
-	public static void buildSchedule() {
+	public static void buildSchedule(List<PlanImpl> plans) {
 
+	}
+
+	public static List<Float> calculatePlanScore(List<PlanImpl> plans, List<Float> weights) {
+		List<Float> scores = new ArrayList<>();
+		int maxPriority = Collections.max(plans.stream().map(PlanImpl::getPriority).collect(Collectors.toList()));
+
+		for (PlanImpl plan : plans) {
+			float score = 0;
+			// inverse of priority
+			score += (1 + maxPriority - plan.getPriority()) * weights.get(0);
+			score += plan.getExecutionTime() * weights.get(1);
+			score += plan.getNumberOfTasks() * weights.get(2);
+			scores.add(score);
+		}
+
+		return scores;
 	}
 
 	private static boolean schedulePlan(PlanImpl plan, Schedule s) {
@@ -59,7 +77,7 @@ public class Scheduler {
 		// STEP 2: controlla che tutti i predecessori siano in s
 		// Prendo gli altri task dello stesso piano di t, che sono stati già
 		// schedulati
-		List<Task> scheduledTasksInSamePlan = s.assignments().stream().map(ScheduleAssignment::getTask)
+		List<Task> scheduledTasksInSamePlan = s.assignments().stream().map(TaskSchedule::getTask)
 				.filter(sc -> sc.getPlanID() == t.getPlanID()).collect(Collectors.toList());
 		List<Integer> scheduledTaskID = scheduledTasksInSamePlan.stream().map(Task::getTaskID)
 				.collect(Collectors.toList());

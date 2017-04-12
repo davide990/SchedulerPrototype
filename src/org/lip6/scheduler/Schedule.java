@@ -20,9 +20,9 @@ public class Schedule implements Executable {
 	/**
 	 * This map contains, for each resource (key), the last assigned task.
 	 */
-	private final Map<Integer, ScheduleAssignment> lastTaskForResource;
+	private final Map<Integer, TaskSchedule> lastTaskForResource;
 	private final List<Integer> plans;
-	private final List<ScheduleAssignment> schedule;
+	private final List<TaskSchedule> schedule;
 
 	private final static Logger logger = Logger.getLogger(Schedule.class.getName());
 
@@ -52,7 +52,7 @@ public class Schedule implements Executable {
 	public void add(int startingTime, Task t) {
 		Objects.requireNonNull(t, "Task cannot be null");
 
-		ScheduleAssignment s = new ScheduleAssignment(t, startingTime, t.getResourceID());
+		TaskSchedule s = new TaskSchedule(t, startingTime, t.getResourceID());
 		schedule.add(s);
 		if (!plans.contains(t.planID)) {
 			plans.add(t.planID);
@@ -70,14 +70,14 @@ public class Schedule implements Executable {
 	 */
 	public int getDueDateForLastTaskIn(int resource) {
 		if (lastTaskForResource.containsKey(resource)) {
-			ScheduleAssignment s = lastTaskForResource.get(resource);
+			TaskSchedule s = lastTaskForResource.get(resource);
 			return s.getStartingTime() + s.getTask().getProcessingTime();
 		}
 
 		return WStart;
 	}
 
-	public List<ScheduleAssignment> assignments() {
+	public List<TaskSchedule> assignments() {
 		return Collections.unmodifiableList(schedule);
 	}
 

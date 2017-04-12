@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.function.Function;
 
 public class TaskFactory {
-	public static Task getNonExecutableTask(int taskID, int planID, int resourceID, int releaseTime, int processingTime,
+	public static Task getTask(int taskID, int planID, int resourceID, int releaseTime, int processingTime,
 			List<Integer> predecessors) {
 
 		if (processingTime <= 0) {

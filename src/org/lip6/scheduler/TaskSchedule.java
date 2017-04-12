@@ -1,11 +1,11 @@
 package org.lip6.scheduler;
 
-public class ScheduleAssignment {
+public class TaskSchedule {
 	private final Task task;
 	private final int startingTime;
 	private final int resource;
 
-	public ScheduleAssignment(Task task, int startingTime, int resource) {
+	public TaskSchedule(Task task, int startingTime, int resource) {
 		this.task = task;
 		this.startingTime = startingTime;
 		this.resource = resource;
@@ -39,7 +39,7 @@ public class ScheduleAssignment {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		ScheduleAssignment other = (ScheduleAssignment) obj;
+		TaskSchedule other = (TaskSchedule) obj;
 		if (task == null) {
 			if (other.task != null)
 				return false;
