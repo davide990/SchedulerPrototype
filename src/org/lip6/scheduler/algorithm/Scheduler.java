@@ -39,7 +39,7 @@ public class Scheduler {
 
 		p2.addTask(TaskFactory.getTask(5, 2, 0, 6, 9));
 		p2.addTask(TaskFactory.getTask(6, 2, 0, 10, 15));
-
+		
 		plans.add(p1);
 		plans.add(p2);
 		plans.add(p0);
@@ -106,6 +106,7 @@ public class Scheduler {
 				}
 			}
 
+			//At this point, each task has been scheduled
 			if (pk.isSchedulable()) {
 				try {
 					lastFeasibleSolution = (Schedule) workingSolution.clone();

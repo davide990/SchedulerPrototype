@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class PlanImpl implements Plan, Executable {
 
@@ -140,6 +141,12 @@ public class PlanImpl implements Plan, Executable {
 			logger.log(Level.FINEST, "Executing task [" + k + "]");
 			v.execute(args);
 		});
+	}
+
+	@Override
+	public String toString() {
+		return "Plan [ID=" + ID + ", tasks=[\n\t"
+				+ tasks.values().stream().map(Task::toString).collect(Collectors.joining("\n\t")) + "]";
 	}
 
 }
