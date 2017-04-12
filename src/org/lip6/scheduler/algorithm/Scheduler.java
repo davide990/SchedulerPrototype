@@ -21,7 +21,7 @@ public class Scheduler {
 
 	public static void main(String[] args) {
 		int WStart = 2;
-		int WEnd = 9;
+		int WEnd = 15;
 		List<PlanImpl> plans = new ArrayList<>();
 		List<Function<PlanImpl, Integer>> criteria = new ArrayList<>();
 		List<Float> weights = new ArrayList<>();
@@ -100,9 +100,8 @@ public class Scheduler {
 		while (!plansQueue.isEmpty()) {
 			Plan pk = plansQueue.poll();
 			for (Task t : pk.tasks()) {
-				if (checkConstraints(t, workingSolution)) {
-					scheduleTask(t, workingSolution);
-				} else {
+				int st = scheduleTask(t, workingSolution);
+				if (!checkConstraints(t, st, workingSolution)) {
 					pk.setSchedulable(false);
 				}
 			}
@@ -117,6 +116,11 @@ public class Scheduler {
 				// push pk into the queue of scheduled plans
 				scheduledPlans.add(pk);
 			} else {
+				try{
+					workingSolution = (Schedule) lastFeasibleSolution.clone();
+				} catch (CloneNotSupportedException e) {
+					e.printStackTrace();
+				}
 				unscheduledPlans.add(pk);
 			}
 
@@ -151,12 +155,13 @@ public class Scheduler {
 	 * @param t
 	 * @param s
 	 */
-	public static boolean checkConstraints(Task t, Schedule s) {
+	public static boolean checkConstraints(Task t, int startingTime, Schedule s) {
 
 		// STEP 1: controlla che starting time sia dentro il bound giusto (cioè
 		// dentro
 		// [rk,dk]e che a sua volta s e s+p siano dentro W
-		int startingTime = Math.max(t.getReleaseTime(), s.getDueDateForLastTaskIn(t.getResourceID()) + 1);
+		// int startingTime = Math.max(t.getReleaseTime(),
+		// s.getDueDateForLastTaskIn(t.getResourceID()) + 1);
 		try {
 			Utils.requireValidBounds(startingTime, t.getReleaseTime(), t.getDueDate(),
 					"for " + t.toString() + ": starting time " + startingTime + " not in [rk=" + t.getReleaseTime()
@@ -191,9 +196,10 @@ public class Scheduler {
 	 * @param t
 	 * @param s
 	 */
-	public static void scheduleTask(Task t, Schedule s) {
-		int startingTime = s.getDueDateForLastTaskIn(t.getResourceID()) + 1;
+	public static int scheduleTask(Task t, Schedule s) {
+		int startingTime = Math.max(s.getDueDateForLastTaskIn(t.getResourceID()) + 1, t.getReleaseTime());
 		s.add(startingTime, t);
+		return startingTime;
 	}
 
 }
