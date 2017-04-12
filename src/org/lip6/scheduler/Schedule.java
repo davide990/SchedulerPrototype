@@ -38,6 +38,7 @@ public class Schedule implements Executable {
 	public static Schedule get(int numResources, int WStart, int WEnd) {
 		Utils.requireValidBounds(WStart, 0, Integer.MAX_VALUE);
 		Utils.requireValidBounds(WEnd, WStart + 1, Integer.MAX_VALUE);
+		Utils.requireValidBounds(numResources, 1, Integer.MAX_VALUE);
 		return new Schedule(numResources, WStart, WEnd);
 	}
 
@@ -77,7 +78,7 @@ public class Schedule implements Executable {
 		return WStart;
 	}
 
-	public List<TaskSchedule> assignments() {
+	public List<TaskSchedule> taskSchedules() {
 		return Collections.unmodifiableList(schedule);
 	}
 

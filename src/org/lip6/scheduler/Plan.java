@@ -10,6 +10,10 @@ public interface Plan {
 	Executable getTask(int taskID);
 
 	int getPriority();
+	
+	int getInversePriority();
+	
+	void setInversePriority(int maxPriority);
 
 	int getExecutionTime();
 

@@ -12,6 +12,7 @@ public class PlanImpl implements Plan, Executable {
 	private final int ID;
 	private boolean schedulable;
 	private final int priority;
+	private int inversePriority;
 	private int executionTime;
 	private int startTime;
 	private int endTime;
@@ -39,6 +40,21 @@ public class PlanImpl implements Plan, Executable {
 	@Override
 	public int getPriority() {
 		return priority;
+	}
+
+	@Override
+	public int getInversePriority() {
+		return inversePriority;
+	}
+
+	/**
+	 * Set the inverse priority for this plan.
+	 * 
+	 * @param maxPriority the highest priority of the plan contained in the same set which contains this plan.
+	 */
+	@Override
+	public void setInversePriority(int maxPriority) {
+		inversePriority = 1 + maxPriority - getPriority();
 	}
 
 	@Override

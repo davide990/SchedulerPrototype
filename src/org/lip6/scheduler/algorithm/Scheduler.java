@@ -3,6 +3,7 @@ package org.lip6.scheduler.algorithm;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.lip6.scheduler.PlanImpl;
@@ -33,6 +34,25 @@ public class Scheduler {
 			score += (1 + maxPriority - plan.getPriority()) * weights.get(0);
 			score += plan.getExecutionTime() * weights.get(1);
 			score += plan.getNumberOfTasks() * weights.get(2);
+			scores.add(score);
+		}
+
+		return scores;
+	}
+
+	public static List<Float> calculatePlanScore(List<PlanImpl> plans, List<Function<PlanImpl, Integer>> criteria,
+			List<Float> weights) {
+
+		if (weights.size() != criteria.size()) {
+			throw new IllegalArgumentException("Weights list must have the same size of criteria list.");
+		}
+
+		List<Float> scores = new ArrayList<>();
+		for (PlanImpl plan : plans) {
+			float score = 0;
+			for (int i = 0; i < weights.size(); i++) {
+				score += criteria.get(i).apply(plan) * weights.get(i);
+			}
 			scores.add(score);
 		}
 
@@ -77,7 +97,7 @@ public class Scheduler {
 		// STEP 2: controlla che tutti i predecessori siano in s
 		// Prendo gli altri task dello stesso piano di t, che sono stati già
 		// schedulati
-		List<Task> scheduledTasksInSamePlan = s.assignments().stream().map(TaskSchedule::getTask)
+		List<Task> scheduledTasksInSamePlan = s.taskSchedules().stream().map(TaskSchedule::getTask)
 				.filter(sc -> sc.getPlanID() == t.getPlanID()).collect(Collectors.toList());
 		List<Integer> scheduledTaskID = scheduledTasksInSamePlan.stream().map(Task::getTaskID)
 				.collect(Collectors.toList());
