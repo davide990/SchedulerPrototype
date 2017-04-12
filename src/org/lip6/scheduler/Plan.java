@@ -13,6 +13,10 @@ public interface Plan {
 	
 	int getInversePriority();
 	
+	float getScore();
+	
+	void setScore(float value);
+	
 	void setInversePriority(int maxPriority);
 
 	int getExecutionTime();

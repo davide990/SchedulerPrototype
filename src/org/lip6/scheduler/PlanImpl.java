@@ -16,12 +16,14 @@ public class PlanImpl implements Plan, Executable {
 	private int executionTime;
 	private int startTime;
 	private int endTime;
+	private float planScore;
 
 	final LinkedHashMap<Integer, Task> tasks = new LinkedHashMap<>();
 
 	private final static Logger logger = Logger.getLogger(PlanImpl.class.getName());
 
 	private PlanImpl(int ID, int priority) {
+		this.planScore = -1;
 		this.ID = ID;
 		this.priority = priority;
 		this.executionTime = 0;
@@ -47,10 +49,22 @@ public class PlanImpl implements Plan, Executable {
 		return inversePriority;
 	}
 
+	@Override
+	public float getScore() {
+		return planScore;
+	}
+
+	@Override
+	public void setScore(float planScore) {
+		this.planScore = planScore;
+	}
+
 	/**
 	 * Set the inverse priority for this plan.
 	 * 
-	 * @param maxPriority the highest priority of the plan contained in the same set which contains this plan.
+	 * @param maxPriority
+	 *            the highest priority of the plan contained in the same set
+	 *            which contains this plan.
 	 */
 	@Override
 	public void setInversePriority(int maxPriority) {

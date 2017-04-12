@@ -2,10 +2,14 @@ package org.lip6.scheduler.algorithm;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.PriorityQueue;
+import java.util.Queue;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.lip6.scheduler.Plan;
 import org.lip6.scheduler.PlanImpl;
 import org.lip6.scheduler.Schedule;
 import org.lip6.scheduler.TaskSchedule;
@@ -20,7 +24,29 @@ public class Scheduler {
 	 * @param t
 	 * @param s
 	 */
-	public static void buildSchedule(List<PlanImpl> plans) {
+	public static void buildSchedule(List<PlanImpl> plans, List<Function<PlanImpl, Integer>> criteria,
+			List<Float> weights) {
+
+		// The sorted set P of plans.
+		Queue<PlanImpl> plansQueue = new PriorityQueue<>(new Comparator<Plan>() {
+			@Override
+			public int compare(Plan o1, Plan o2) {
+				return Float.compare(o1.getScore(), o2.getScore());
+			}
+		});
+
+		// Calculate the inverse priority for each plan
+		int maxPriority = Collections.max(plans.stream().map(PlanImpl::getPriority).collect(Collectors.toList()));
+		plans.forEach(p -> p.setInversePriority(maxPriority));
+
+		// Calculate the plans score
+		calculatePlanScore(plans, criteria, weights);
+
+		// Once calculated the score, each plan is inserted in order to the
+		// priority queue
+		plans.forEach(p -> plansQueue.add(p));
+
+		// [TODO] MAIN LOOP
 
 	}
 
@@ -34,6 +60,7 @@ public class Scheduler {
 			score += (1 + maxPriority - plan.getPriority()) * weights.get(0);
 			score += plan.getExecutionTime() * weights.get(1);
 			score += plan.getNumberOfTasks() * weights.get(2);
+			plan.setScore(score);
 			scores.add(score);
 		}
 
