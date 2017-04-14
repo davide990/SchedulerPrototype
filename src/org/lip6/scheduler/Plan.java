@@ -7,18 +7,18 @@ public interface Plan {
 
 	Collection<Task> tasks();
 
-	Executable getTask(int taskID);
+	Task getTask(int taskID);
 
 	int getID();
-	
+
 	int getPriority();
-	
+
 	int getInversePriority();
-	
+
 	float getScore();
-	
+
 	void setScore(float value);
-	
+
 	void setInversePriority(int maxPriority);
 
 	int getExecutionTime();

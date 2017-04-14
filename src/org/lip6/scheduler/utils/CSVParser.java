@@ -4,6 +4,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Reader;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,29 +19,35 @@ import org.lip6.scheduler.TaskFactory;
 
 public class CSVParser {
 
-	/*
-	 * public static void main(String[] args) { Map<Integer, PlanImpl> p = null;
-	 * try { p = parse("/home/davide/task_benchmark_papero.csv"); } catch
-	 * (IOException e) { e.printStackTrace(); }
-	 * 
-	 * p.forEach((k, v) -> { System.out.println(v); });
-	 * 
-	 * // -----
-	 * 
-	 * try { serialize(new ArrayList(p.values()),
-	 * "/home/davide/task_benchmark_papero.csv.reverse"); } catch (IOException
-	 * e) { // TODO Auto-generated catch block e.printStackTrace(); } }
-	 */
+	public static void main(String[] args) {
+		Map<Integer, Plan> p = null;
+
+		try {
+			p = parse("/home/davide/task_benchmark_papero.csv");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		p.forEach((k, v) -> {
+			System.out.println(v);
+		});
+
+		try {
+			serialize(new ArrayList<>(p.values()), "/home/davide/task_benchmark_papero.csv.reverse");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
 	private enum headers {
 		taskID, planID, planPriority, resourceID, releaseTime, processingTime
 	}
 
-	public static Map<Integer, PlanImpl> parse(String fname) throws IOException {
+	public static Map<Integer, Plan> parse(String fname) throws IOException {
 		Reader in = new FileReader(fname);
 		Iterable<CSVRecord> records = CSVFormat.EXCEL.withFirstRecordAsHeader().withHeader(headers.class).parse(in);
 
-		Map<Integer, PlanImpl> plans = new HashMap<>();
+		Map<Integer, Plan> plans = new HashMap<>();
 
 		for (CSVRecord record : records) {
 			int planID = Integer.parseInt(record.get("planID"));

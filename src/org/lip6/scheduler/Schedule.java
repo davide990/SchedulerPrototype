@@ -62,7 +62,7 @@ public class Schedule implements Executable, Cloneable {
 				e.printStackTrace();
 			}
 		});
-		
+
 		schedule.forEach(sc -> {
 			try {
 				s.schedule.add((TaskSchedule) sc.clone());
@@ -70,9 +70,9 @@ public class Schedule implements Executable, Cloneable {
 				e.printStackTrace();
 			}
 		});
-		
+
 		plans.forEach(p -> s.plans.add(p));
-		
+
 		return s;
 	}
 
@@ -81,8 +81,8 @@ public class Schedule implements Executable, Cloneable {
 
 		TaskSchedule s = new TaskSchedule(t, startingTime, t.getResourceID());
 		schedule.add(s);
-		if (!plans.contains(t.planID)) {
-			plans.add(t.planID);
+		if (!plans.contains(t.getPlanID())) {
+			plans.add(t.getPlanID());
 		}
 		lastTaskForResource.put(t.getResourceID(), s);
 	}

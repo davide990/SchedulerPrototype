@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import org.lip6.scheduler.Plan;
 import org.lip6.scheduler.PlanImpl;
 import org.lip6.scheduler.Schedule;
+import org.lip6.scheduler.Task;
 import org.lip6.scheduler.TaskSchedule;
 import org.lip6.scheduler.Task;
 import org.lip6.scheduler.TaskFactory;

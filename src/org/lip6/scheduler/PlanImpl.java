@@ -90,11 +90,11 @@ public class PlanImpl implements Plan, Executable {
 	@Override
 	public void addTask(Task t) {
 		Objects.requireNonNull(t);
-		if (tasks.putIfAbsent(t.taskID, t) != null) {
+		if (tasks.putIfAbsent(t.getTaskID(), t) != null) {
 			throw new IllegalArgumentException("Task is already in plan");
 		}
 
-		if (t.planID != ID) {
+		if (t.getPlanID() != ID) {
 			throw new IllegalArgumentException("Task ID is different from plan ID.");
 		}
 
@@ -109,13 +109,13 @@ public class PlanImpl implements Plan, Executable {
 	}
 
 	@Override
-	public Executable getTask(int taskID) {
+	public Task getTask(int taskID) {
 		return tasks.getOrDefault(taskID, null);
 	}
 
 	@Override
 	public void updateTask(Task t) {
-		tasks.replace(t.taskID, t);
+		tasks.replace(t.getTaskID(), t);
 	}
 
 	@Override
@@ -139,7 +139,10 @@ public class PlanImpl implements Plan, Executable {
 		logger.log(Level.FINEST, "Executing plan [" + ID + "]");
 		tasks.forEach((k, v) -> {
 			logger.log(Level.FINEST, "Executing task [" + k + "]");
-			v.execute(args);
+
+			// TODO sistemare qui
+			// v.execute(args);
+
 		});
 	}
 
