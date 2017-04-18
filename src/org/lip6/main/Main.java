@@ -1,15 +1,6 @@
 package org.lip6.main;
 
 import java.awt.Color;
-import java.util.Arrays;
-import java.util.Random;
-
-import org.lip6.scheduler.PlanImpl;
-import org.lip6.scheduler.TaskImpl;
-import org.lip6.scheduler.TaskFactory;
-
-
-import java.awt.Color;
 import java.util.Random;
 
 public class Main {
@@ -42,7 +33,7 @@ private static Random random = new Random();
         {
             Color color = new Color(random.nextFloat(), random.nextFloat(), random.nextFloat()).brighter();
             
-            String hexColor = Integer.toHexString(color.getRGB());
+            //String hexColor = Integer.toHexString(color.getRGB());
             //System.err.println(Integer.toString(i)+",#"+hexColor);
             //System.out.println(Integer.toString(i));
             

@@ -14,7 +14,6 @@ import org.lip6.scheduler.PlanImpl;
 import org.lip6.scheduler.Schedule;
 import org.lip6.scheduler.Task;
 import org.lip6.scheduler.TaskSchedule;
-import org.lip6.scheduler.Task;
 import org.lip6.scheduler.TaskFactory;
 import org.lip6.scheduler.utils.Utils;
 
@@ -30,7 +29,8 @@ public class Scheduler {
 		PlanImpl p0 = PlanImpl.get(0, 5);
 		PlanImpl p1 = PlanImpl.get(1, 9);
 		PlanImpl p2 = PlanImpl.get(2, 2);
-
+		
+		//getTask(int taskID, int planID, int resourceID, int releaseTime, int processingTime)
 		p0.addTask(TaskFactory.getTask(0, 0, 0, 2, 5));
 		p0.addTask(TaskFactory.getTask(1, 0, 0, 6, 8));
 		p0.addTask(TaskFactory.getTask(2, 0, 0, 9, 14));
@@ -45,6 +45,7 @@ public class Scheduler {
 		plans.add(p2);
 		plans.add(p0);
 
+		//CRITERIA SETTING
 		criteria.add(PlanImpl::getPriority);
 		weights.add(1f);
 		criteria.add(PlanImpl::getNumberOfTasks);
