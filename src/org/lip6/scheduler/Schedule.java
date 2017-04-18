@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import org.lip6.scheduler.utils.Utils;
 
@@ -21,7 +22,15 @@ public class Schedule implements Executable, Cloneable {
 	 * This map contains, for each resource (key), the last assigned task.
 	 */
 	private final Map<Integer, TaskSchedule> lastTaskForResource;
+
+	/**
+	 * This list contains the ID of the plans scheduled
+	 */
 	private final List<Integer> plans;
+
+	/**
+	 * The ordered set of task schedules
+	 */
 	private final List<TaskSchedule> schedule;
 
 	private final static Logger logger = Logger.getLogger(Schedule.class.getName());
@@ -128,6 +137,19 @@ public class Schedule implements Executable, Cloneable {
 		 * schedule.forEach((k, v) -> { logger.log(Level.FINEST,
 		 * "Executing Plan [" + k + "]"); // v.execute(args); });
 		 */
+	}
+
+	@Override
+	public String toString() {
+
+		String s = "";
+		for (int plan : plans()) {
+			String tasks = schedule.stream().map(TaskSchedule::getTask).filter(x -> x.getPlanID() == plan)
+					.map(x -> Integer.toString(x.getTaskID())).collect(Collectors.joining(","));
+			s = s.concat("Plan #" + plan + ": {" + tasks + "}\n");
+		}
+
+		return s;
 	}
 
 }

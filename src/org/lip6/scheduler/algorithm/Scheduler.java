@@ -6,7 +6,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Queue;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.lip6.scheduler.Plan;
@@ -23,14 +22,13 @@ public class Scheduler {
 		int WStart = 2;
 		int WEnd = 15;
 		List<PlanImpl> plans = new ArrayList<>();
-		List<Function<PlanImpl, Integer>> criteria = new ArrayList<>();
-		List<Float> weights = new ArrayList<>();
+		List<Criteria> criterias = new ArrayList<>();
 
 		PlanImpl p0 = PlanImpl.get(0, 5);
 		PlanImpl p1 = PlanImpl.get(1, 9);
 		PlanImpl p2 = PlanImpl.get(2, 2);
-		
-		//getTask(int taskID, int planID, int resourceID, int releaseTime, int processingTime)
+
+		// getTask(taskID, planID, resourceID, releaseTime, processingTime)
 		p0.addTask(TaskFactory.getTask(0, 0, 0, 2, 5));
 		p0.addTask(TaskFactory.getTask(1, 0, 0, 6, 8));
 		p0.addTask(TaskFactory.getTask(2, 0, 0, 9, 14));
@@ -40,27 +38,25 @@ public class Scheduler {
 
 		p2.addTask(TaskFactory.getTask(5, 2, 0, 6, 9));
 		p2.addTask(TaskFactory.getTask(6, 2, 0, 10, 15));
-		
+
 		plans.add(p1);
 		plans.add(p2);
 		plans.add(p0);
 
-		//CRITERIA SETTING
-		criteria.add(PlanImpl::getPriority);
-		weights.add(1f);
-		criteria.add(PlanImpl::getNumberOfTasks);
-		weights.add(0.1f);
-		criteria.add(PlanImpl::getExecutionTime);
-		weights.add(0.01f);
+		// CRITERIA SETTING
+		criterias.add(new Criteria(PlanImpl::getPriority, 1f));
+		criterias.add(new Criteria(PlanImpl::getNumberOfTasks, 0.1f));
+		criterias.add(new Criteria(PlanImpl::getExecutionTime, 0.01f));
 
 		System.out.println("SET OF PLANS:");
 		plans.forEach(p -> {
 			System.out.println("---> " + p.getID());
 		});
 
-		Schedule s = buildSchedule(plans, criteria, weights, WStart, WEnd);
-
+		Schedule s = buildSchedule(plans, criterias, WStart, WEnd);
 		System.out.println("Scheduled plans: " + s.plans().size() + " of " + plans.size());
+
+		System.out.println("Scheduling:\n" + s);
 	}
 
 	/**
@@ -69,11 +65,10 @@ public class Scheduler {
 	 * @param t
 	 * @param s
 	 */
-	public static Schedule buildSchedule(List<PlanImpl> plans, List<Function<PlanImpl, Integer>> criteria,
-			List<Float> weights, int WStart, int WEnd) {
 
-		Schedule workingSolution = Schedule.get(1, WStart, WEnd);
-		Schedule lastFeasibleSolution = Schedule.get(1, WStart, WEnd);
+	private static Schedule buildSchedule(List<PlanImpl> plans, List<Criteria> criterias, int wStart, int wEnd) {
+		Schedule workingSolution = Schedule.get(1, wStart, wEnd);
+		Schedule lastFeasibleSolution = Schedule.get(1, wStart, wEnd);
 
 		Comparator<Plan> comparator = new Comparator<Plan>() {
 			@Override
@@ -92,7 +87,7 @@ public class Scheduler {
 		plans.forEach(p -> p.setInversePriority(maxPriority));
 
 		// Calculate the plans score
-		calculatePlanScore(plans, criteria, weights);
+		calculatePlanScore(plans, criterias);
 
 		// Once calculated the score, each plan is inserted in order to the
 		// priority queue
@@ -108,7 +103,7 @@ public class Scheduler {
 				}
 			}
 
-			//At this point, each task has been scheduled
+			// At this point, each task has been scheduled
 			if (pk.isSchedulable()) {
 				try {
 					lastFeasibleSolution = (Schedule) workingSolution.clone();
@@ -119,7 +114,7 @@ public class Scheduler {
 				// push pk into the queue of scheduled plans
 				scheduledPlans.add(pk);
 			} else {
-				try{
+				try {
 					workingSolution = (Schedule) lastFeasibleSolution.clone();
 				} catch (CloneNotSupportedException e) {
 					e.printStackTrace();
@@ -132,24 +127,19 @@ public class Scheduler {
 		return lastFeasibleSolution;
 	}
 
-	public static List<Float> calculatePlanScore(List<PlanImpl> plans, List<Function<PlanImpl, Integer>> criteria,
-			List<Float> weights) {
-
-		if (weights.size() != criteria.size()) {
-			throw new IllegalArgumentException("Weights list must have the same size of criteria list.");
-		}
-
+	private static List<Float> calculatePlanScore(List<PlanImpl> plans, List<Criteria> criterias) {
 		List<Float> scores = new ArrayList<>();
 		for (PlanImpl plan : plans) {
 			float score = 0;
-			for (int i = 0; i < weights.size(); i++) {
-				score += criteria.get(i).apply(plan) * weights.get(i);
+			for (int i = 0; i < criterias.size(); i++) {
+				score += criterias.get(i).getCriteriaFunc().apply(plan) * criterias.get(i).getWeight();
 			}
 			plan.setScore(score);
 			scores.add(score);
 		}
 
 		return scores;
+
 	}
 
 	/**
