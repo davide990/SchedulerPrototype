@@ -2,18 +2,18 @@ package org.lip6.scheduler.algorithm;
 
 import java.util.function.Function;
 
-import org.lip6.scheduler.PlanImpl;
+import org.lip6.scheduler.Plan;
 
 public class Criteria {
-	private final Function<PlanImpl, Integer> criteriaFunc;
+	private final Function<Plan, Integer> criteriaFunc;
 	private final float weight;
 
-	public Criteria(Function<PlanImpl, Integer> criteriaFunc, float weight) {
+	public Criteria(Function<Plan, Integer> criteriaFunc, float weight) {
 		this.criteriaFunc = criteriaFunc;
 		this.weight = weight;
 	}
 
-	public Function<PlanImpl, Integer> getCriteriaFunc() {
+	public Function<Plan, Integer> getCriteriaFunc() {
 		return criteriaFunc;
 	}
 

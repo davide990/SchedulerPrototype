@@ -11,6 +11,8 @@ public interface Task {
 	int getDueDate();
 
 	int getPlanID();
+	
+	int getPlanPriority();
 
 	int getReleaseTime();
 
@@ -19,6 +21,8 @@ public interface Task {
 	List<Integer> getPredecessors();
 
 	String toHTMLString();
+	
+	String toHTMLString(String textColor);
 
 	Object clone() throws CloneNotSupportedException;
 }

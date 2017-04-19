@@ -1,62 +1,47 @@
 package org.lip6.scheduler.algorithm;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.stream.Collectors;
 
 import org.lip6.scheduler.Plan;
-import org.lip6.scheduler.PlanImpl;
 import org.lip6.scheduler.Schedule;
 import org.lip6.scheduler.Task;
 import org.lip6.scheduler.TaskSchedule;
-import org.lip6.scheduler.TaskFactory;
+import org.lip6.scheduler.utils.CSVParser;
 import org.lip6.scheduler.utils.Utils;
 
 public class Scheduler {
 
-	public static void main(String[] args) {
-		int WStart = 2;
-		int WEnd = 15;
-		List<PlanImpl> plans = new ArrayList<>();
-		List<Criteria> criterias = new ArrayList<>();
+	private static Comparator<Plan> planComparator = new Comparator<Plan>() {
+		@Override
+		public int compare(Plan o1, Plan o2) {
+			return -Float.compare(o1.getScore(), o2.getScore());
+		}
+	};
 
-		PlanImpl p0 = PlanImpl.get(0, 5);
-		PlanImpl p1 = PlanImpl.get(1, 9);
-		PlanImpl p2 = PlanImpl.get(2, 2);
-
-		// getTask(taskID, planID, resourceID, releaseTime, processingTime)
-		p0.addTask(TaskFactory.getTask(0, 0, 0, 2, 5));
-		p0.addTask(TaskFactory.getTask(1, 0, 0, 6, 8));
-		p0.addTask(TaskFactory.getTask(2, 0, 0, 9, 14));
-
-		p1.addTask(TaskFactory.getTask(3, 1, 0, 1, 3));
-		p1.addTask(TaskFactory.getTask(4, 1, 0, 1, 6));
-
-		p2.addTask(TaskFactory.getTask(5, 2, 0, 6, 9));
-		p2.addTask(TaskFactory.getTask(6, 2, 0, 10, 15));
-
-		plans.add(p1);
-		plans.add(p2);
-		plans.add(p0);
-
-		// CRITERIA SETTING
-		criterias.add(new Criteria(PlanImpl::getPriority, 1f));
-		criterias.add(new Criteria(PlanImpl::getNumberOfTasks, 0.1f));
-		criterias.add(new Criteria(PlanImpl::getExecutionTime, 0.01f));
-
-		System.out.println("SET OF PLANS:");
-		plans.forEach(p -> {
-			System.out.println("---> " + p.getID());
-		});
-
+	public static Schedule scheduleFromFile(int WStart, int WEnd, List<Criteria> criterias, String filename) {
+		Map<Integer, Plan> p = null;
+		try {
+			p = CSVParser.parse(filename);
+		} catch (IOException e) {
+			System.err.println("Error while loading file: \"" + filename + "\"");
+			return null;
+		}
+		List<Plan> plans = new ArrayList<>(p.values());
 		Schedule s = buildSchedule(plans, criterias, WStart, WEnd);
-		System.out.println("Scheduled plans: " + s.plans().size() + " of " + plans.size());
+		return s;
+	}
 
-		System.out.println("Scheduling:\n" + s);
+	public static Schedule schedule(int WStart, int WEnd, List<Criteria> criterias, List<Plan> plans) {
+		Schedule s = buildSchedule(plans, criterias, WStart, WEnd);
+		return s;
 	}
 
 	/**
@@ -66,24 +51,17 @@ public class Scheduler {
 	 * @param s
 	 */
 
-	private static Schedule buildSchedule(List<PlanImpl> plans, List<Criteria> criterias, int wStart, int wEnd) {
+	private static Schedule buildSchedule(List<Plan> plans, List<Criteria> criterias, int wStart, int wEnd) {
 		Schedule workingSolution = Schedule.get(1, wStart, wEnd);
 		Schedule lastFeasibleSolution = Schedule.get(1, wStart, wEnd);
 
-		Comparator<Plan> comparator = new Comparator<Plan>() {
-			@Override
-			public int compare(Plan o1, Plan o2) {
-				return Float.compare(o1.getScore(), o2.getScore());
-			}
-		};
-
 		// The sorted set P of plans.
-		Queue<Plan> plansQueue = new PriorityQueue<>(comparator);
-		Queue<Plan> scheduledPlans = new PriorityQueue<>(comparator);
-		Queue<Plan> unscheduledPlans = new PriorityQueue<>(comparator);
+		Queue<Plan> plansQueue = new PriorityQueue<>(planComparator);
+		Queue<Plan> scheduledPlans = new PriorityQueue<>(planComparator);
+		Queue<Plan> unscheduledPlans = new PriorityQueue<>(planComparator);
 
 		// Calculate the inverse priority for each plan
-		int maxPriority = Collections.max(plans.stream().map(PlanImpl::getPriority).collect(Collectors.toList()));
+		int maxPriority = Collections.max(plans.stream().map(Plan::getPriority).collect(Collectors.toList()));
 		plans.forEach(p -> p.setInversePriority(maxPriority));
 
 		// Calculate the plans score
@@ -93,11 +71,18 @@ public class Scheduler {
 		// priority queue
 		plans.forEach(p -> plansQueue.add(p));
 
+		plansQueue.forEach(p -> System.out
+				.println("plan added: " + Integer.toString(p.getID()) + ", score:" + Float.toString(p.getScore())));
+
 		// MAIN LOOP
 		while (!plansQueue.isEmpty()) {
 			Plan pk = plansQueue.poll();
+			System.out.println("PLAN " + pk.getID());
+
 			for (Task t : pk.tasks()) {
+
 				int st = scheduleTask(t, workingSolution);
+				System.out.println("--> Task " + t.getResourceID() + " scheduled at " + Integer.toString(st));
 				if (!checkConstraints(t, st, workingSolution)) {
 					pk.setSchedulable(false);
 				}
@@ -127,9 +112,9 @@ public class Scheduler {
 		return lastFeasibleSolution;
 	}
 
-	private static List<Float> calculatePlanScore(List<PlanImpl> plans, List<Criteria> criterias) {
+	private static List<Float> calculatePlanScore(List<Plan> plans, List<Criteria> criterias) {
 		List<Float> scores = new ArrayList<>();
-		for (PlanImpl plan : plans) {
+		for (Plan plan : plans) {
 			float score = 0;
 			for (int i = 0; i < criterias.size(); i++) {
 				score += criterias.get(i).getCriteriaFunc().apply(plan) * criterias.get(i).getWeight();
@@ -148,7 +133,7 @@ public class Scheduler {
 	 * @param t
 	 * @param s
 	 */
-	public static boolean checkConstraints(Task t, int startingTime, Schedule s) {
+	private static boolean checkConstraints(Task t, int startingTime, Schedule s) {
 
 		// STEP 1: controlla che starting time sia dentro il bound giusto (cioè
 		// dentro
@@ -156,14 +141,18 @@ public class Scheduler {
 		// int startingTime = Math.max(t.getReleaseTime(),
 		// s.getDueDateForLastTaskIn(t.getResourceID()) + 1);
 		try {
-			Utils.requireValidBounds(startingTime, t.getReleaseTime(), t.getDueDate(),
-					"for " + t.toString() + ": starting time " + startingTime + " not in [rk=" + t.getReleaseTime()
-							+ ",dk=" + t.getDueDate() + "]");
+			// Utils.requireValidBounds(startingTime, t.getReleaseTime(),
+			// t.getDueDate(),
+			// "for " + t.toString() + ": starting time " + startingTime + " not
+			// in [rk=" + t.getReleaseTime()
+			// + ",dk=" + t.getDueDate() + "]");
 
+			// Checks for the starting time to be inside the temporal window
+			// [Ws,We]
 			Utils.requireValidBounds(startingTime, s.getWStart(), s.getWEnd(), "for " + t.toString()
 					+ ": starting time " + startingTime + " not in window [" + s.getWStart() + "," + s.getWEnd() + "]");
 		} catch (IllegalArgumentException e) {
-			System.out.println(e.getMessage());
+			System.err.println(e.getMessage());
 			return false;
 		}
 
@@ -177,7 +166,9 @@ public class Scheduler {
 
 		for (Integer p : t.getPredecessors()) {
 			if (!scheduledTaskID.contains(p))
-				return false;
+				System.err.println("Error: for task " + t.getTaskID() + "[plan " + t.getPlanID()
+						+ "] schedule doesn't contains required predecessor " + p + " within the same plan.");
+			return false;
 		}
 
 		return true;
@@ -189,9 +180,16 @@ public class Scheduler {
 	 * @param t
 	 * @param s
 	 */
-	public static int scheduleTask(Task t, Schedule s) {
-		int startingTime = Math.max(s.getDueDateForLastTaskIn(t.getResourceID()) + 1, t.getReleaseTime());
+	private static int scheduleTask(Task t, Schedule s) {
+		// calculate the starting time for the task t
+		int lastTaskScheduledDueDate = s.getDueDateForLastTaskIn(t.getResourceID());
+		int rk = t.getReleaseTime();
+
+		int startingTime = Math.max(lastTaskScheduledDueDate, rk);
+
+		// Add the task to the schedule
 		s.add(startingTime, t);
+
 		return startingTime;
 	}
 

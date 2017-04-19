@@ -1,43 +1,87 @@
 package org.lip6.main;
 
-import java.awt.Color;
-import java.util.Random;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.lip6.scheduler.Plan;
+import org.lip6.scheduler.PlanImpl;
+import org.lip6.scheduler.Schedule;
+import org.lip6.scheduler.TaskFactory;
+import org.lip6.scheduler.algorithm.Criteria;
+import org.lip6.scheduler.algorithm.Scheduler;
 
 public class Main {
 
-	/*public static void main(String[] args) {
+	public static void main(String[] args) {
+		// Map<Integer, Plan> p = null;
+		int WStart = 2;
+		int WEnd = 15;
+		List<Criteria> criterias = new ArrayList<>();
 
-		Task t1 = TaskFactory.getTask(0, 0, 0, 0, 1, Arrays.asList(1, 2), (String[] arg) -> {
-			System.out.println("hello");
-			return null;
-		});
+		/*
+		 * try { p = CSVParser.parse("/home/davide/task_benchmark_papero.csv");
+		 * } catch (IOException e) { e.printStackTrace(); }
+		 * 
+		 * p.forEach((k, v) -> { System.out.println(v); });
+		 * 
+		 * List<Plan> plans = new ArrayList<>(p.values());
+		 */
+		// CRITERIA SETTING
+		criterias.add(new Criteria(Plan::getPriority, 1f));
+		criterias.add(new Criteria(Plan::getNumberOfTasks, 0.1f));
+		criterias.add(new Criteria(Plan::getExecutionTime, 0.01f));
 
-		PlanImpl plan = PlanImpl.get(0, 0);
-		plan.addTask(t1);
+		// System.out.print("SET OF PLANS: ");
+		// System.out.println(plans.stream().map(x ->
+		// Integer.toString(x.getID())).collect(Collectors.joining(", ")));
 
-		plan.execute(args);
+		// Schedule s = Scheduler.schedule(WStart, WEnd, criterias, plans);
+		Schedule s = Scheduler.scheduleFromFile(WStart, WEnd, criterias, "/home/davide/task_benchmark_papero.csv");
+		// System.out.println("Scheduled plans: " + s.plans().size() + " of " +
+		// plans.size());
+		System.out.println("Scheduling:\n" + s);
 
 	}
-*/
-	
-	
-	
-private static Random random = new Random();
-	
-	public static void main(String[] args)
-    {
-        //Color color = new Color(random.nextFloat(), random.nextFloat(), random.nextFloat());
-        //String hexColor = Integer.toHexString(color.getRGB());
-        
-        for (int i=0;i<200;i++)
-        {
-            Color color = new Color(random.nextFloat(), random.nextFloat(), random.nextFloat()).brighter();
-            
-            //String hexColor = Integer.toHexString(color.getRGB());
-            //System.err.println(Integer.toString(i)+",#"+hexColor);
-            //System.out.println(Integer.toString(i));
-            
-            System.out.println(color.getRed()+"\t"+color.getGreen()+"\t"+color.getBlue());
-        }
-    }
+
+	void main2(String[] args) {
+		int WStart = 2;
+		int WEnd = 15;
+		List<Plan> plans = new ArrayList<>();
+		List<Criteria> criterias = new ArrayList<>();
+
+		PlanImpl p0 = PlanImpl.get(0, 5);
+		PlanImpl p1 = PlanImpl.get(1, 9);
+		PlanImpl p2 = PlanImpl.get(2, 2);
+
+		// getTask(taskID, planID, resourceID, releaseTime, processingTime)
+		p0.addTask(TaskFactory.getTask(0, 0, 0, 2, 4, 5));
+		p0.addTask(TaskFactory.getTask(1, 0, 0, 6, 4, 8));
+		p0.addTask(TaskFactory.getTask(2, 0, 0, 9, 4, 14));
+
+		p1.addTask(TaskFactory.getTask(3, 1, 0, 1, 4, 3));
+		p1.addTask(TaskFactory.getTask(4, 1, 0, 1, 4, 6));
+
+		p2.addTask(TaskFactory.getTask(5, 2, 0, 6, 4, 9));
+		p2.addTask(TaskFactory.getTask(6, 2, 0, 10, 4, 15));
+
+		plans.add(p1);
+		plans.add(p2);
+		plans.add(p0);
+
+		// CRITERIA SETTING
+		criterias.add(new Criteria(Plan::getPriority, 1f));
+		criterias.add(new Criteria(Plan::getNumberOfTasks, 0.1f));
+		criterias.add(new Criteria(Plan::getExecutionTime, 0.01f));
+
+		System.out.println("SET OF PLANS:");
+		plans.forEach(p -> {
+			System.out.println("---> " + p.getID());
+		});
+
+		Schedule s = Scheduler.schedule(WStart, WEnd, criterias, plans);
+		System.out.println("Scheduled plans: " + s.plans().size() + " of " + plans.size());
+
+		System.out.println("Scheduling:\n" + s);
+	}
+
 }

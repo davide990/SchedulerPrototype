@@ -15,9 +15,10 @@ public class TaskTest {
 		int resourceID = 0;
 		int planID = 0;
 		int releaseTime = -1;
+		int planPriority = -1;
 		List<Integer> successors = Arrays.asList(1, 2);
 
-		TaskFactory.getTask(taskID, planID, resourceID, releaseTime, processingTime, successors);
+		TaskFactory.getTask(taskID, planID, resourceID, releaseTime, processingTime, planPriority, successors);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -27,8 +28,9 @@ public class TaskTest {
 		int resourceID = 0;
 		int releaseTime = 0;
 		int processingTime = -1;
+		int planPriority = -1;
 		List<Integer> successors = Arrays.asList(1, 2);
-		TaskFactory.getTask(taskID, planID, resourceID, releaseTime, processingTime, successors);
+		TaskFactory.getTask(taskID, planID, resourceID, releaseTime, processingTime, planPriority, successors);
 	}
 
 }

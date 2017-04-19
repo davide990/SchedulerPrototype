@@ -10,9 +10,10 @@ public class TaskImpl implements Executable, Cloneable, Task {
 	final int resourceID;
 	int releaseTime;
 	final int processingTime;
+	final int planPriority;
 	final List<Integer> predecessors;
 
-	public TaskImpl(int taskID, int planID, int resourceID, int releaseTime, int processingTime,
+	public TaskImpl(int taskID, int planID, int resourceID, int releaseTime, int processingTime, int planPriority,
 			List<Integer> predecessors) {
 		this.taskID = taskID;
 		this.planID = planID;
@@ -20,11 +21,12 @@ public class TaskImpl implements Executable, Cloneable, Task {
 		this.releaseTime = releaseTime;
 		this.processingTime = processingTime;
 		this.predecessors = predecessors;
+		this.planPriority = planPriority;
 	}
 
 	@Override
 	public Object clone() {
-		return TaskFactory.getTask(taskID, planID, resourceID, releaseTime, processingTime, predecessors);
+		return TaskFactory.getTask(taskID, planID, resourceID, releaseTime, processingTime, planPriority, predecessors);
 	}
 
 	@Override
@@ -101,6 +103,12 @@ public class TaskImpl implements Executable, Cloneable, Task {
 	}
 
 	@Override
+	public int getPlanPriority() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
@@ -134,6 +142,14 @@ public class TaskImpl implements Executable, Cloneable, Task {
 	public String toHTMLString() {
 		return "<html><body><center><p>J<sup>" + getPlanID() + "</sup><sub style='position: relative; left: -.5em;'>"
 				+ getTaskID() + "</sub></p></center></body></html>";
+
+	}
+
+	@Override
+	public String toHTMLString(String textColor) {
+		return "<html><body><center><p style='color:" + textColor + ";'>J<sup>" + getPlanID()
+				+ "</sup><sub style='position: relative; left: -.5em;'>" + getTaskID()
+				+ "</sub></p></center></body></html>";
 
 	}
 

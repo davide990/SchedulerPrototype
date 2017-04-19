@@ -52,13 +52,16 @@ public class CSVParser {
 		for (CSVRecord record : records) {
 			int planID = Integer.parseInt(record.get("planID"));
 			int planPriority = Integer.parseInt(record.get("planPriority"));
-			plans.putIfAbsent(planID, PlanImpl.get(planID, planPriority));
-
 			int taskID = Integer.parseInt(record.get("taskID"));
 			int resourceID = Integer.parseInt(record.get("resourceID"));
 			int releaseTime = Integer.parseInt(record.get("releaseTime"));
 			int processingTime = Integer.parseInt(record.get("processingTime"));
-			plans.get(planID).addTask(TaskFactory.getTask(taskID, planID, resourceID, releaseTime, processingTime));
+			
+			//Add the plan if it doesn't exists
+			plans.putIfAbsent(planID, PlanImpl.get(planID, planPriority));
+			
+			//Add the task to the plan
+			plans.get(planID).addTask(TaskFactory.getTask(taskID, planID, resourceID, releaseTime, planPriority, processingTime));
 		}
 
 		return plans;
