@@ -3,6 +3,8 @@ package org.lip6.scheduler.utils;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,6 +45,31 @@ public class CSVParser {
 		taskID, planID, planPriority, resourceID, releaseTime, processingTime
 	}
 
+	public static Map<Integer, Plan> parse(InputStream inputStream) throws IOException {
+		Iterable<CSVRecord> records = CSVFormat.EXCEL.withFirstRecordAsHeader().withHeader(headers.class)
+				.parse(new InputStreamReader(inputStream));
+
+		Map<Integer, Plan> plans = new HashMap<>();
+
+		for (CSVRecord record : records) {
+			int planID = Integer.parseInt(record.get("planID"));
+			int planPriority = Integer.parseInt(record.get("planPriority"));
+			int taskID = Integer.parseInt(record.get("taskID"));
+			int resourceID = Integer.parseInt(record.get("resourceID"));
+			int releaseTime = Integer.parseInt(record.get("releaseTime"));
+			int processingTime = Integer.parseInt(record.get("processingTime"));
+
+			// Add the plan if it doesn't exists
+			plans.putIfAbsent(planID, PlanImpl.get(planID, planPriority));
+
+			// Add the task to the plan
+			plans.get(planID).addTask(
+					TaskFactory.getTask(taskID, planID, resourceID, releaseTime, planPriority, processingTime));
+		}
+
+		return plans;
+	}
+
 	public static Map<Integer, Plan> parse(String fname) throws IOException {
 		Reader in = new FileReader(fname);
 		Iterable<CSVRecord> records = CSVFormat.EXCEL.withFirstRecordAsHeader().withHeader(headers.class).parse(in);
@@ -56,12 +83,13 @@ public class CSVParser {
 			int resourceID = Integer.parseInt(record.get("resourceID"));
 			int releaseTime = Integer.parseInt(record.get("releaseTime"));
 			int processingTime = Integer.parseInt(record.get("processingTime"));
-			
-			//Add the plan if it doesn't exists
+
+			// Add the plan if it doesn't exists
 			plans.putIfAbsent(planID, PlanImpl.get(planID, planPriority));
-			
-			//Add the task to the plan
-			plans.get(planID).addTask(TaskFactory.getTask(taskID, planID, resourceID, releaseTime, planPriority, processingTime));
+
+			// Add the task to the plan
+			plans.get(planID).addTask(
+					TaskFactory.getTask(taskID, planID, resourceID, releaseTime, planPriority, processingTime));
 		}
 
 		return plans;

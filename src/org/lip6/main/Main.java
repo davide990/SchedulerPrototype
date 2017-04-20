@@ -27,9 +27,9 @@ public class Main {
 		 * List<Plan> plans = new ArrayList<>(p.values());
 		 */
 		// CRITERIA SETTING
-		criterias.add(new Criteria(Plan::getPriority, 1f));
-		criterias.add(new Criteria(Plan::getNumberOfTasks, 0.1f));
-		criterias.add(new Criteria(Plan::getExecutionTime, 0.01f));
+		criterias.add(new Criteria(Plan::getPriority, "Plan Priority", 1f));
+		criterias.add(new Criteria(Plan::getNumberOfTasks, "Number of Tasks", 0.1f));
+		criterias.add(new Criteria(Plan::getExecutionTime, "Estimated Execution Time", 0.01f));
 
 		// System.out.print("SET OF PLANS: ");
 		// System.out.println(plans.stream().map(x ->
@@ -69,9 +69,9 @@ public class Main {
 		plans.add(p0);
 
 		// CRITERIA SETTING
-		criterias.add(new Criteria(Plan::getPriority, 1f));
-		criterias.add(new Criteria(Plan::getNumberOfTasks, 0.1f));
-		criterias.add(new Criteria(Plan::getExecutionTime, 0.01f));
+		criterias.add(new Criteria(Plan::getPriority, "Plan Priority", 1f));
+		criterias.add(new Criteria(Plan::getNumberOfTasks, "Number of Tasks", 0.1f));
+		criterias.add(new Criteria(Plan::getExecutionTime, "Estimated Execution Time", 0.01f));
 
 		System.out.println("SET OF PLANS:");
 		plans.forEach(p -> {

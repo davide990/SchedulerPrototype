@@ -1,6 +1,7 @@
 package org.lip6.scheduler.algorithm;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -32,6 +33,19 @@ public class Scheduler {
 			p = CSVParser.parse(filename);
 		} catch (IOException e) {
 			System.err.println("Error while loading file: \"" + filename + "\"");
+			return null;
+		}
+		List<Plan> plans = new ArrayList<>(p.values());
+		Schedule s = buildSchedule(plans, criterias, WStart, WEnd);
+		return s;
+	}
+
+	public static Schedule schedule(int WStart, int WEnd, List<Criteria> criterias, InputStream is) {
+		Map<Integer, Plan> p = null;
+		try {
+			p = CSVParser.parse(is);
+		} catch (IOException e) {
+			System.err.println("Error while processing input stream.\n" + e);
 			return null;
 		}
 		List<Plan> plans = new ArrayList<>(p.values());
@@ -151,6 +165,11 @@ public class Scheduler {
 			// [Ws,We]
 			Utils.requireValidBounds(startingTime, s.getWStart(), s.getWEnd(), "for " + t.toString()
 					+ ": starting time " + startingTime + " not in window [" + s.getWStart() + "," + s.getWEnd() + "]");
+
+			// Checks for the due date to be inside the temporal window [Ws,We]
+			Utils.requireValidBounds(startingTime + t.getProcessingTime(), s.getWStart(), s.getWEnd(),
+					"for " + t.toString() + ": due date " + startingTime + t.getProcessingTime() + " not in window ["
+							+ s.getWStart() + "," + s.getWEnd() + "]");
 		} catch (IllegalArgumentException e) {
 			System.err.println(e.getMessage());
 			return false;
