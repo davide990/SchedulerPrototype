@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -24,7 +25,7 @@ public class Schedule implements Executable, Cloneable {
 	private final Map<Integer, TaskSchedule> lastTaskForResource;
 
 	/**
-	 * This list contains the ID of the plans scheduled
+	 * List containing the IDs of the scheduled plans
 	 */
 	private final List<Integer> plans;
 
@@ -44,10 +45,18 @@ public class Schedule implements Executable, Cloneable {
 		lastTaskForResource = new HashMap<>();
 	}
 
+	/**
+	 * Get an istance of Schedule
+	 * 
+	 * @param numResources
+	 * @param WStart
+	 * @param WEnd
+	 * @return
+	 */
 	public static Schedule get(int numResources, int WStart, int WEnd) {
-		Utils.requireValidBounds(WStart, 0, Integer.MAX_VALUE);
-		Utils.requireValidBounds(WEnd, WStart + 1, Integer.MAX_VALUE);
-		Utils.requireValidBounds(numResources, 1, Integer.MAX_VALUE);
+		Utils.requireValidBounds(WStart, 0, Integer.MAX_VALUE, "Invalid value of WStart");
+		Utils.requireValidBounds(WEnd, WStart + 1, Integer.MAX_VALUE, "Invalid value of WEnd");
+		Utils.requireValidBounds(numResources, 1, Integer.MAX_VALUE, "Num. resource < 1");
 		return new Schedule(numResources, WStart, WEnd);
 	}
 
@@ -66,7 +75,6 @@ public class Schedule implements Executable, Cloneable {
 		lastTaskForResource.forEach((k, v) -> {
 			try {
 				s.lastTaskForResource.put(k, (TaskSchedule) v.clone());
-
 			} catch (CloneNotSupportedException e) {
 				e.printStackTrace();
 			}
@@ -85,8 +93,36 @@ public class Schedule implements Executable, Cloneable {
 		return s;
 	}
 
+	/**
+	 * Get the accomplishment time (proc. time + starting time) for the
+	 * specified task
+	 */
+	public int getAccomplishmentTime(int planID, int taskID) {
+		// Find the corresponding task assignment
+		Optional<TaskSchedule> s = schedule.stream()
+				.filter(x -> x.getTask().getPlanID() == planID && x.getTask().getTaskID() == taskID).findFirst();
+
+		// if the task has been scheduled, get its accomplishment time
+		if (s.isPresent()) {
+			return s.get().getStartingTime() + s.get().getTask().getProcessingTime();
+		}
+
+		// otherwise throw an exception
+		throw new IllegalArgumentException(
+				"task #" + Integer.toString(taskID) + " in plan #" + Integer.toString(planID) + " not found");
+	}
+
+	/**
+	 * Add the task t to this schedule to the given starting time.
+	 * 
+	 * @param startingTime
+	 * @param t
+	 */
 	public void add(int startingTime, Task t) {
 		Objects.requireNonNull(t, "Task cannot be null");
+		if (startingTime <= 0) {
+			throw new IllegalArgumentException("Starting time can not be <= 0");
+		}
 
 		// Create a new task assignment for task t at starting time startingTime
 		TaskSchedule s = new TaskSchedule(t, startingTime, t.getResourceID());
@@ -103,23 +139,18 @@ public class Schedule implements Executable, Cloneable {
 	}
 
 	/**
-	 * Returns the due date of the last task allocated for the specified
+	 * Returns the accomplishment date of the last task allocated for the given
 	 * resource, or WStart if there's no task allocated for it.
 	 * 
 	 * @param resource
 	 *            the ID of the resource
 	 * @return
 	 */
-	public int getDueDateForLastTaskIn(int resource) {
+	public int getAccomplishmentForLastTaskIn(int resource) {
 		// If a task has been already scheduled for a given resource
 		if (lastTaskForResource.containsKey(resource)) {
-			// Get its due date
 			TaskSchedule s = lastTaskForResource.get(resource);
-
-			int dueDate = s.getStartingTime() + s.getTask().getProcessingTime();
-
-			return dueDate;
-			// return s.getStartingTime() + s.getTask().getProcessingTime();
+			return s.getStartingTime() + s.getTask().getProcessingTime();
 		}
 
 		return WStart;
@@ -138,7 +169,7 @@ public class Schedule implements Executable, Cloneable {
 	}
 
 	public boolean isFeasible() {
-
+		// TODO WRITE ME
 		return true;
 	}
 
@@ -153,7 +184,6 @@ public class Schedule implements Executable, Cloneable {
 
 	@Override
 	public String toString() {
-
 		String s = "";
 		for (int plan : plans()) {
 			String tasks = schedule.stream().map(TaskSchedule::getTask).filter(x -> x.getPlanID() == plan)

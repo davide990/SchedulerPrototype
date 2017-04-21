@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,32 +20,12 @@ import org.lip6.scheduler.TaskFactory;
 
 public class CSVParser {
 
-	public static void main(String[] args) {
-		Map<Integer, Plan> p = null;
-
-		try {
-			p = parse("/home/davide/task_benchmark_papero.csv");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		p.forEach((k, v) -> {
-			System.out.println(v);
-		});
-
-		try {
-			serialize(new ArrayList<>(p.values()), "/home/davide/task_benchmark_papero.csv.reverse");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
-	private enum headers {
+	private enum csvHeaders {
 		taskID, planID, planPriority, resourceID, releaseTime, processingTime
 	}
 
 	public static Map<Integer, Plan> parse(InputStream inputStream) throws IOException {
-		Iterable<CSVRecord> records = CSVFormat.EXCEL.withFirstRecordAsHeader().withHeader(headers.class)
+		Iterable<CSVRecord> records = CSVFormat.EXCEL.withFirstRecordAsHeader().withHeader(csvHeaders.class)
 				.parse(new InputStreamReader(inputStream));
 
 		Map<Integer, Plan> plans = new HashMap<>();
@@ -72,7 +51,7 @@ public class CSVParser {
 
 	public static Map<Integer, Plan> parse(String fname) throws IOException {
 		Reader in = new FileReader(fname);
-		Iterable<CSVRecord> records = CSVFormat.EXCEL.withFirstRecordAsHeader().withHeader(headers.class).parse(in);
+		Iterable<CSVRecord> records = CSVFormat.EXCEL.withFirstRecordAsHeader().withHeader(csvHeaders.class).parse(in);
 
 		Map<Integer, Plan> plans = new HashMap<>();
 
@@ -96,9 +75,8 @@ public class CSVParser {
 	}
 
 	public static void serialize(List<Plan> plans, String fname) throws IOException {
-
 		final FileWriter fout = new FileWriter(fname);
-		final CSVPrinter printer = CSVFormat.EXCEL.withHeader(headers.class).print(fout);
+		final CSVPrinter printer = CSVFormat.EXCEL.withHeader(csvHeaders.class).print(fout);
 
 		for (Plan p : plans) {
 			for (Task t : p.tasks()) {

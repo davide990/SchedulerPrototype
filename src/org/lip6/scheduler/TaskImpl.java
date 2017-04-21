@@ -13,7 +13,7 @@ public class TaskImpl implements Executable, Cloneable, Task {
 	final int planPriority;
 	final List<Integer> predecessors;
 
-	public TaskImpl(int taskID, int planID, int resourceID, int releaseTime, int processingTime, int planPriority,
+	TaskImpl(int taskID, int planID, int resourceID, int releaseTime, int processingTime, int planPriority,
 			List<Integer> predecessors) {
 		this.taskID = taskID;
 		this.planID = planID;

@@ -20,7 +20,7 @@ import org.lip6.scheduler.utils.Utils;
 
 public class Scheduler {
 
-	private static Comparator<Plan> planComparator = new Comparator<Plan>() {
+	private static final Comparator<Plan> PLAN_COMPARATOR = new Comparator<Plan>() {
 		@Override
 		public int compare(Plan o1, Plan o2) {
 			return -Float.compare(o1.getScore(), o2.getScore());
@@ -60,19 +60,19 @@ public class Scheduler {
 
 	/**
 	 * ALGORITHM 1
+	 * TODO MANCA IL NUMERO DI RISORSE
 	 * 
 	 * @param t
 	 * @param s
 	 */
-
 	private static Schedule buildSchedule(List<Plan> plans, List<Criteria> criterias, int wStart, int wEnd) {
 		Schedule workingSolution = Schedule.get(1, wStart, wEnd);
 		Schedule lastFeasibleSolution = Schedule.get(1, wStart, wEnd);
 
 		// The sorted set P of plans.
-		Queue<Plan> plansQueue = new PriorityQueue<>(planComparator);
-		Queue<Plan> scheduledPlans = new PriorityQueue<>(planComparator);
-		Queue<Plan> unscheduledPlans = new PriorityQueue<>(planComparator);
+		Queue<Plan> plansQueue = new PriorityQueue<>(PLAN_COMPARATOR);
+		Queue<Plan> scheduledPlans = new PriorityQueue<>(PLAN_COMPARATOR);
+		Queue<Plan> unscheduledPlans = new PriorityQueue<>(PLAN_COMPARATOR);
 
 		// Calculate the inverse priority for each plan
 		int maxPriority = Collections.max(plans.stream().map(Plan::getPriority).collect(Collectors.toList()));
@@ -90,9 +90,11 @@ public class Scheduler {
 
 		// MAIN LOOP
 		while (!plansQueue.isEmpty()) {
+			// Get the highest scored plan from the sorted queue
 			Plan pk = plansQueue.poll();
 			System.out.println("PLAN " + pk.getID());
 
+			// Loop each task t in the plan pk
 			for (Task t : pk.tasks()) {
 
 				int st = scheduleTask(t, workingSolution);
@@ -201,7 +203,7 @@ public class Scheduler {
 	 */
 	private static int scheduleTask(Task t, Schedule s) {
 		// calculate the starting time for the task t
-		int lastTaskScheduledDueDate = s.getDueDateForLastTaskIn(t.getResourceID());
+		int lastTaskScheduledDueDate = s.getAccomplishmentForLastTaskIn(t.getResourceID());
 		int rk = t.getReleaseTime();
 
 		int startingTime = Math.max(lastTaskScheduledDueDate, rk);
