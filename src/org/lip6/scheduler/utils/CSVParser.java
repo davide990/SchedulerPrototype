@@ -64,7 +64,7 @@ public class CSVParser {
 
 			// Add the task to the plan
 			plans.get(planID).addTask(
-					TaskFactory.getTask(taskID, planID, resourceID, releaseTime, planPriority, processingTime));
+					TaskFactory.getTask(taskID, planID, resourceID, releaseTime, processingTime, planPriority));
 		}
 
 		return plans;
@@ -89,7 +89,7 @@ public class CSVParser {
 
 			// Add the task to the plan
 			plans.get(planID).addTask(
-					TaskFactory.getTask(taskID, planID, resourceID, releaseTime, planPriority, processingTime));
+					TaskFactory.getTask(taskID, planID, resourceID, releaseTime, processingTime, planPriority));
 		}
 
 		return plans;

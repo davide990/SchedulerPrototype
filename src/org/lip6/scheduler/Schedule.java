@@ -88,16 +88,17 @@ public class Schedule implements Executable, Cloneable {
 	public void add(int startingTime, Task t) {
 		Objects.requireNonNull(t, "Task cannot be null");
 
-		//Create a new task assignment for task t at starting time startingTime
+		// Create a new task assignment for task t at starting time startingTime
 		TaskSchedule s = new TaskSchedule(t, startingTime, t.getResourceID());
 		schedule.add(s);
-		
-		//Keep the ID of the plan which contains t
+
+		// Keep the ID of the plan which contains t
 		if (!plans.contains(t.getPlanID())) {
 			plans.add(t.getPlanID());
 		}
-		
-		//Keep the task t as the last task assigned for the resource at which it refers.
+
+		// Keep the task t as the last task assigned for the resource at which
+		// it refers.
 		lastTaskForResource.put(t.getResourceID(), s);
 	}
 
@@ -110,15 +111,15 @@ public class Schedule implements Executable, Cloneable {
 	 * @return
 	 */
 	public int getDueDateForLastTaskIn(int resource) {
-		//If a task has been already scheduled for a given resource
+		// If a task has been already scheduled for a given resource
 		if (lastTaskForResource.containsKey(resource)) {
-			//Get its due date
+			// Get its due date
 			TaskSchedule s = lastTaskForResource.get(resource);
-			
-			int dueDate = s.getStartingTime()+s.getTask().getProcessingTime();
-			
+
+			int dueDate = s.getStartingTime() + s.getTask().getProcessingTime();
+
 			return dueDate;
-			//return s.getStartingTime() + s.getTask().getProcessingTime();
+			// return s.getStartingTime() + s.getTask().getProcessingTime();
 		}
 
 		return WStart;
