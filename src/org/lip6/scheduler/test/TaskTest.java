@@ -1,8 +1,5 @@
 package org.lip6.scheduler.test;
 
-import java.util.Arrays;
-import java.util.List;
-
 import org.junit.Test;
 import org.lip6.scheduler.TaskFactory;
 
@@ -16,9 +13,9 @@ public class TaskTest {
 		int planID = 0;
 		int releaseTime = -1;
 		int planPriority = -1;
-		List<Integer> successors = Arrays.asList(1, 2);
+		// List<Integer> predecessors = Arrays.asList(1, 2);
 
-		TaskFactory.getTask(taskID, planID, resourceID, releaseTime, processingTime, planPriority, successors);
+		TaskFactory.getTask(taskID, planID, resourceID, releaseTime, processingTime, planPriority, null);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -29,8 +26,8 @@ public class TaskTest {
 		int releaseTime = 0;
 		int processingTime = -1;
 		int planPriority = -1;
-		List<Integer> successors = Arrays.asList(1, 2);
-		TaskFactory.getTask(taskID, planID, resourceID, releaseTime, processingTime, planPriority, successors);
+		// List<Integer> successors = Arrays.asList(1, 2);
+		TaskFactory.getTask(taskID, planID, resourceID, releaseTime, processingTime, planPriority, null);
 	}
 
 }

@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
+
 public class TaskFactory {
 
 	public static TaskImpl getTask(int taskID, int planID, int resourceID, int releaseTime, int processingTime,
@@ -20,7 +22,7 @@ public class TaskFactory {
 	}
 
 	public static Task getTask(int taskID, int planID, int resourceID, int releaseTime, int processingTime,
-			int planPriority, List<Integer> predecessors) {
+			int planPriority, List<ImmutablePair<Integer, Integer>> predecessors) {
 
 		if (processingTime <= 0) {
 			throw new IllegalArgumentException("Processing time must be >= 0.");
@@ -33,7 +35,7 @@ public class TaskFactory {
 	}
 
 	public static TaskImpl getTask(int taskID, int planID, int resourceID, int releaseTime, int processingTime,
-			int planPriority, List<Integer> predecessors, Function<String[], Void> executionFunction) {
+			int planPriority, List<ImmutablePair<Integer, Integer>> predecessors, Function<String[], Void> executionFunction) {
 
 		if (processingTime <= 0) {
 			throw new IllegalArgumentException("Processing time must be >= 0.");

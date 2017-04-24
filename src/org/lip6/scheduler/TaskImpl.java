@@ -1,7 +1,10 @@
 package org.lip6.scheduler;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import org.apache.commons.lang3.tuple.ImmutablePair;
 
 public class TaskImpl implements Executable, Cloneable, Task {
 
@@ -11,17 +14,21 @@ public class TaskImpl implements Executable, Cloneable, Task {
 	int releaseTime;
 	final int processingTime;
 	final int planPriority;
-	final List<Integer> predecessors;
+	/**
+	 * A map containing as key the ID of a plan and as value a list of tasks
+	 * which precedes this task.
+	 */
+	final List<ImmutablePair<Integer, Integer>> predecessors;
 
 	TaskImpl(int taskID, int planID, int resourceID, int releaseTime, int processingTime, int planPriority,
-			List<Integer> predecessors) {
+			List<ImmutablePair<Integer, Integer>> predecessors) {
 		this.taskID = taskID;
 		this.planID = planID;
 		this.resourceID = resourceID;
 		this.releaseTime = releaseTime;
 		this.processingTime = processingTime;
-		this.predecessors = predecessors;
 		this.planPriority = planPriority;
+		this.predecessors = new ArrayList<>(predecessors);
 	}
 
 	@Override
@@ -98,14 +105,13 @@ public class TaskImpl implements Executable, Cloneable, Task {
 	 * @see org.lip6.scheduler.Task#getPredecessors()
 	 */
 	@Override
-	public List<Integer> getPredecessors() {
+	public List<ImmutablePair<Integer, Integer>> getPredecessors() {
 		return Collections.unmodifiableList(predecessors);
 	}
 
 	@Override
 	public int getPlanPriority() {
-		// TODO Auto-generated method stub
-		return 0;
+		return planPriority;
 	}
 
 	@Override

@@ -15,7 +15,7 @@ public class Main {
 	public static void main(String[] args) {
 		// Map<Integer, Plan> p = null;
 		int WStart = 2;
-		int WEnd = 15;
+		int WEnd = 12;
 		List<Criteria> criterias = new ArrayList<>();
 
 		/*
@@ -36,7 +36,9 @@ public class Main {
 		// Integer.toString(x.getID())).collect(Collectors.joining(", ")));
 
 		// Schedule s = Scheduler.schedule(WStart, WEnd, criterias, plans);
-		Schedule s = Scheduler.scheduleFromFile(WStart, WEnd, criterias, "/home/davide/task_benchmark_papero.csv");
+		// Schedule s = Scheduler.scheduleFromFile(WStart, WEnd, criterias,
+		// "/home/davide/task_benchmark_papero.csv");
+		Schedule s = Scheduler.scheduleFromFile(WStart, WEnd, criterias, "/home/davide/paper_plans.csv");
 		// System.out.println("Scheduled plans: " + s.plans().size() + " of " +
 		// plans.size());
 		System.out.println("Scheduling:\n" + s);

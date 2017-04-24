@@ -1,6 +1,7 @@
 package org.lip6.scheduler;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -158,6 +159,10 @@ public class Schedule implements Executable, Cloneable {
 
 	public List<TaskSchedule> taskSchedules() {
 		return Collections.unmodifiableList(schedule);
+	}
+
+	public void unSchedule(Collection<TaskSchedule> collection) {
+		schedule.removeAll(collection);
 	}
 
 	public List<Integer> plans() {
