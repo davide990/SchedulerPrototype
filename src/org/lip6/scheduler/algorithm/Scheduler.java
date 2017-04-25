@@ -9,6 +9,7 @@ import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.PriorityQueue;
 import java.util.Queue;
@@ -23,6 +24,9 @@ import org.lip6.scheduler.utils.CSVParser;
 import org.lip6.scheduler.utils.Utils;
 
 public class Scheduler {
+
+	private static final int MAX_TABU_TURNS = 10;
+	private static final int MAX_TABU_TRIES = 10;
 
 	private static final Comparator<Plan> PLAN_COMPARATOR = new Comparator<Plan>() {
 		@Override
@@ -39,7 +43,6 @@ public class Scheduler {
 			System.err.println("Error while loading file: \"" + filename + "\"");
 			return null;
 		} catch (ParseException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		List<Plan> plans = new ArrayList<>(p.values());
@@ -102,25 +105,52 @@ public class Scheduler {
 
 			// STEP 1 ------------------------------------------------------
 			if (!tabuList.isEmpty()) {
+				// Extract a tabu task from the list
 				TabuListEntry e = tabuList.poll();
 				if (e.getWaitTurns() > 0) {
 					e.setWaitTurns(e.getWaitTurns() - 1);
 					tabuList.add(e);
-				} else {
-					// Check precedence constraints
-					if (!checkPrecedences(workingSolution, e.getTask())) {
-						e.setWaitTurns(e.getWaitTurns() + 1);
+					continue;
+				}
+				// TURNI == 0 QUI
+				// verifico la precedenza -> se va bene, ok
+				// se non va bene, verifico il numero di tentativi fatti. Se
+				// il numero di tries è maggiore di quello stabilito per
+				// parametro, allora scarta il piano
+
+				System.err.println("Checking " + e);
+
+				if (!checkPrecedences(workingSolution, e.getTask())) {
+					if (e.getNumTries() >= MAX_TABU_TRIES) {
+						// scarta il piano
+						List<TaskSchedule> toRemove = workingSolution.taskSchedules().stream()
+								.filter(x -> x.getTask().getPlanID() == e.getPlan().getID())
+								.collect(Collectors.toList());
+						workingSolution.unSchedule(toRemove);
+						// Push pk into the queue of unscheduled plans
+						unscheduledPlans.add(e.getPlan());
+
+						System.err.println("[TABU UPDATE] PLAN " + e.getTask().getPlanID()
+								+ " Discarded -> max number of tabu turns for plan " + e.getTask().getTaskID());
+
+					} else {
+
+						e.setWaitTurns(MAX_TABU_TURNS);
+						e.increaseNumTries();
 						tabuList.add(e);
-						continue;
+						System.err.println("Reinserting " + e);
 					}
 
+				} else {
+					// Precedence constraints are met here. Finally,
+					// schedule
+					// the task
 					int st = scheduleTask(e.getTask(), workingSolution);
-					System.out.println("[TABU UPDATE]--> Task " + e.getTask().getResourceID() + " scheduled at "
-							+ Integer.toString(st));
 					if (!checkConstraints(e.getTask(), st, workingSolution)) {
+						System.err.println("Task " + e.getTask() + " DO NOT MEET CONSTRAINTS.");
 						e.getPlan().setSchedulable(false);
 					}
-
+					
 					if (e.getPlan().isSchedulable()) {
 						try {
 							lastFeasibleSolution = (Schedule) workingSolution.clone();
@@ -138,14 +168,13 @@ public class Scheduler {
 					}
 				}
 			}
-
 			// STEP 2 ------------------------------------------------------
 			// Get the highest scored plan from the sorted queue
 			Plan pk = plansQueue.poll();
 			if (pk == null) {
 				continue;
 			}
-			System.out.println("PLAN " + pk.getID());
+			System.out.println("------ >PLAN " + pk.getID());
 
 			boolean hasTabuTask = false;
 
@@ -154,55 +183,70 @@ public class Scheduler {
 
 				// Check precedence constraints
 				if (!checkPrecedences(workingSolution, t)) {
-					tabuList.add(new TabuListEntry(t, pk, 1));
+					System.err.println("Adding " + t + " to tabu list");
+					tabuList.add(new TabuListEntry(t, pk, MAX_TABU_TURNS));
 					hasTabuTask = true;
 					continue;
 				}
 				// if satisfied -> proceed
 				int st = scheduleTask(t, workingSolution);
-				System.out.println("--> Task " + t.getResourceID() + " scheduled at " + Integer.toString(st));
+				System.out.println("Plan #" + pk.getID() + ": Task " + t.getResourceID() + " scheduled at "
+						+ Integer.toString(st));
 				if (!checkConstraints(t, st, workingSolution)) {
 					pk.setSchedulable(false);
 				}
 			}
+
 			if (hasTabuTask) {
-				continue; // ...because right now the plan cannot be checked,
-							// since it has some task in the tabu list
+				// Here the plan can not be checked if it's schedulable or not,
+				// since it has one or more task pending in the tabu list. In
+				// this case, the algorithm proceeds.
+				continue;
 			}
 
-			// At this point, each task has been scheduled
+			// At this point, each task of pk has been scheduled
 			if (pk.isSchedulable()) {
 				try {
 					lastFeasibleSolution = (Schedule) workingSolution.clone();
 				} catch (CloneNotSupportedException e) {
 					e.printStackTrace();
 				}
-				// push pk into the queue of scheduled plans
+				// Push pk into the queue of scheduled plans
 				scheduledPlans.add(pk);
 			} else {
+				// pk is NOT schedulable: take all its tasks and remove them
+				// from the solution
 				List<TaskSchedule> toRemove = workingSolution.taskSchedules().stream()
 						.filter(x -> x.getTask().getPlanID() == pk.getID()).collect(Collectors.toList());
 				workingSolution.unSchedule(toRemove);
-				/*
-				 * try { workingSolution = (Schedule)
-				 * lastFeasibleSolution.clone(); } catch
-				 * (CloneNotSupportedException e) { e.printStackTrace(); }
-				 */
+				// Push pk into the queue of unscheduled plans
 				unscheduledPlans.add(pk);
 			}
-
 		}
 
 		return lastFeasibleSolution;
+
 	}
 
+	/**
+	 * Calculate the scores for the given plans, according to the input criteria
+	 * 
+	 * @param plans
+	 * @param criterias
+	 * @return
+	 */
 	private static List<Float> calculatePlanScore(List<Plan> plans, List<Criteria> criterias) {
 		List<Float> scores = new ArrayList<>();
+		// Iterate each plan
 		for (Plan plan : plans) {
+			// Initialize the score at zero
 			float score = 0;
 			for (int i = 0; i < criterias.size(); i++) {
+				// Apply the criteria function, using the weight specified, to
+				// the current plan, and add the resulting value to the score
 				score += criterias.get(i).getCriteriaFunc().apply(plan) * criterias.get(i).getWeight();
 			}
+			// Set the score for the current plan
 			plan.setScore(score);
 			scores.add(score);
 		}
@@ -218,18 +262,12 @@ public class Scheduler {
 	 * @param s
 	 */
 	private static boolean checkConstraints(Task t, int startingTime, Schedule s) {
-
-		// STEP 1: controlla che starting time sia dentro il bound giusto (cioè
-		// dentro
-		// [rk,dk]e che a sua volta s e s+p siano dentro W
-		// int startingTime = Math.max(t.getReleaseTime(),
-		// s.getDueDateForLastTaskIn(t.getResourceID()) + 1);
+		// Check for the starting time to be inside the allowed boundaries
 		try {
-			// Utils.requireValidBounds(startingTime, t.getReleaseTime(),
-			// t.getDueDate(),
-			// "for " + t.toString() + ": starting time " + startingTime + " not
-			// in [rk=" + t.getReleaseTime()
-			// + ",dk=" + t.getDueDate() + "]");
+			// Checks for the starting time to be inside [rk,dk]
+			Utils.requireValidBounds(startingTime, t.getReleaseTime(), t.getDueDate(),
+					"for " + t.toString() + ": starting time " + startingTime + " not in [rk=" + t.getReleaseTime()
+							+ ",dk=" + t.getDueDate() + "]");
 
 			// Checks for the starting time to be inside the temporal window
 			// [Ws,We]
@@ -239,45 +277,32 @@ public class Scheduler {
 			// Checks for the accomplishment date to be inside the temporal
 			// window [Ws,We]
 			Utils.requireValidBounds(startingTime + t.getProcessingTime(), s.getWStart(), s.getWEnd(),
-					"for " + t.toString() + ": due date " + startingTime + t.getProcessingTime() + " not in window ["
+					"for " + t.toString() + ", sk=" + Integer.toString(startingTime) + ",pk="
+							+ Integer.toString(t.getProcessingTime()) + ": accomplishment date "
+							+ Integer.toString(startingTime + t.getProcessingTime()) + " not in window ["
 							+ s.getWStart() + "," + s.getWEnd() + "]");
 		} catch (IllegalArgumentException e) {
 			System.err.println(e.getMessage());
 			return false;
 		}
 
-		// STEP 2: controlla che tutti i predecessori siano in s
-		// Prendo gli altri task dello stesso piano di t, che sono stati già
-		// schedulati
-		// List<Task> scheduledTasksInSamePlan =
-		// s.taskSchedules().stream().map(TaskSchedule::getTask)
-		// .filter(sc -> sc.getPlanID() ==
-		// t.getPlanID()).collect(Collectors.toList());
-		// List<Integer> scheduledTaskID =
-		// scheduledTasksInSamePlan.stream().map(Task::getTaskID)
-		// .collect(Collectors.toList());
-
-		// Per ogni predecessore del task, verifica che sia stato gia schedulato
-
-		/*
-		 * 
-		 * 
-		 * PRECEDENZA for (Integer p : t.getPredecessors()) { if
-		 * (!scheduledTaskID.contains(p)) System.err.println("Error: for task "
-		 * + t.getTaskID() + "[plan " + t.getPlanID() +
-		 * "] schedule doesn't contains required predecessor " + p +
-		 * " within the same plan."); return false; }
-		 * 
-		 * 
-		 * 
-		 * 
-		 * 
-		 */
-
 		return true;
 	}
 
+	/**
+	 * Check if the given task's predecessors are already scheduled in the given
+	 * solution
+	 * 
+	 * @param s
+	 *            the solution to be checked
+	 * @param t
+	 *            the task which predecessors are to be checked
+	 * @return <b>true</b> if all the predecessors of t are scheduled in s,
+	 *         <b>false</b> otherwise
+	 */
 	private static boolean checkPrecedences(Schedule s, Task t) {
+		// From the list of the actually scheduled task, take those who are
+		// predecessors of the task t
 		final List<ImmutablePair<Integer, Integer>> scheduledPlanTaskPairs = s.taskSchedules().stream()
 				.map(x -> new ImmutablePair<>(x.getTask().getPlanID(), x.getTask().getTaskID()))
 				.collect(Collectors.toList());
@@ -294,45 +319,46 @@ public class Scheduler {
 	 * ALGORITHM 2
 	 * 
 	 * @param t
+	 *            the task to be scheduled
 	 * @param s
+	 *            the solution where t has to be scheduled
 	 */
 	private static int scheduleTask(Task t, Schedule s) {
-		// calculate the starting time for the task t
-		// int lastTaskScheduledDueDate =
-		// s.getAccomplishmentForLastTaskIn(t.getResourceID());
+		/*
+		 * Optional<Task> tt = s.taskSchedules().stream().map(x ->
+		 * x.getTask()).filter(x -> x == t).findFirst(); if (tt.isPresent()) {
+		 * return Integer.MAX_VALUE; // task already scheduled }
+		 */
 
-		// In questo punto tutti i predecessori di t sono stati gia schedulati,
-		// bisogna solo calcolare la giusta starting time
-
-		// s -> triple (piano,task,sk)
-		// t.predecessors
-
-		// Prendo tutti gli schedule che sono anche predecessori di t
+		// From the list of the actually scheduled task, take those who are
+		// predecessors of the task t
 		List<TaskSchedule> f = s.taskSchedules().stream()
 				.filter(x -> t.getPredecessors()
 						.contains(new ImmutablePair<>(x.getTask().getPlanID(), x.getTask().getTaskID())))
 				.collect(Collectors.toList());
-		// Prendo la accomplishment date piu grande
 
-		OptionalInt maxAccomplishmentDate = f.stream()
+		// From the set of scheduled predecessors, take the maximum
+		// accomplishment date
+		OptionalInt maxPredecessorAccomplishmentDate = f.stream()
 				.mapToInt(x -> x.getStartingTime() + x.getTask().getProcessingTime()).max();
 
-		int md = -1;
-		if (!maxAccomplishmentDate.isPresent()) {
+		// If there is any predecessor scheduled, take its accomplishment date,
+		// otherwise the accomplishment of the last scheduled task for the
+		// resource demanded by the task t to be scheduled
+		int md = 0;
+		if (!maxPredecessorAccomplishmentDate.isPresent()) {
 			md = s.getAccomplishmentForLastTaskIn(t.getResourceID());
 		} else {
-
-			md = maxAccomplishmentDate.getAsInt();
-			System.err.println("For task " + t + " starting time is MAX: " + Integer.toString(md));
+			md = maxPredecessorAccomplishmentDate.getAsInt();
 		}
 
-		int rk = t.getReleaseTime();
-		int startingTime = Math.max(md, rk);
-		// int startingTime = Math.max(lastTaskScheduledDueDate, rk);
+		// Calculate the starting time for t
+		int startingTime = Math.max(md, t.getReleaseTime());
 
 		// Add the task to the schedule
 		s.add(startingTime, t);
 
+		// Return the starting time
 		return startingTime;
 	}
 

@@ -15,7 +15,7 @@ public class Main {
 	public static void main(String[] args) {
 		// Map<Integer, Plan> p = null;
 		int WStart = 2;
-		int WEnd = 12;
+		int WEnd = 15;
 		List<Criteria> criterias = new ArrayList<>();
 
 		/*
@@ -47,7 +47,7 @@ public class Main {
 
 	void main2(String[] args) {
 		int WStart = 2;
-		int WEnd = 15;
+		int WEnd = 8;
 		List<Plan> plans = new ArrayList<>();
 		List<Criteria> criterias = new ArrayList<>();
 
@@ -55,16 +55,17 @@ public class Main {
 		PlanImpl p1 = PlanImpl.get(1, 9);
 		PlanImpl p2 = PlanImpl.get(2, 2);
 
-		// getTask(taskID, planID, resourceID, releaseTime, processingTime)
-		p0.addTask(TaskFactory.getTask(0, 0, 0, 2, 4, 5));
-		p0.addTask(TaskFactory.getTask(1, 0, 0, 6, 4, 8));
-		p0.addTask(TaskFactory.getTask(2, 0, 0, 9, 4, 14));
+		// getTask(taskID, planID, resourceID, releaseTime, dueDate,
+		// processingTime)
+		p0.addTask(TaskFactory.getTask(0, 0, 0, 2, 4, 10, 5));
+		p0.addTask(TaskFactory.getTask(1, 0, 0, 6, 4, 10, 8));
+		p0.addTask(TaskFactory.getTask(2, 0, 0, 9, 4, 10, 14));
 
-		p1.addTask(TaskFactory.getTask(3, 1, 0, 1, 4, 3));
-		p1.addTask(TaskFactory.getTask(4, 1, 0, 1, 4, 6));
+		p1.addTask(TaskFactory.getTask(3, 1, 0, 1, 4, 10, 3));
+		p1.addTask(TaskFactory.getTask(4, 1, 0, 1, 4, 10, 6));
 
-		p2.addTask(TaskFactory.getTask(5, 2, 0, 6, 4, 9));
-		p2.addTask(TaskFactory.getTask(6, 2, 0, 10, 4, 15));
+		p2.addTask(TaskFactory.getTask(5, 2, 0, 6, 4, 10, 9));
+		p2.addTask(TaskFactory.getTask(6, 2, 0, 10, 4, 10, 15));
 
 		plans.add(p1);
 		plans.add(p2);

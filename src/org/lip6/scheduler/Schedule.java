@@ -163,6 +163,23 @@ public class Schedule implements Executable, Cloneable {
 
 	public void unSchedule(Collection<TaskSchedule> collection) {
 		schedule.removeAll(collection);
+		lastTaskForResource.values().removeAll(collection);
+
+		// Since schedules are removed from the map that keeps the last
+		// allocated task(value) for resource(key), this map has to be updated.
+		// So, for each of the remaining task, rebuild the map containing the
+		// latest allocated task for resource
+		schedule.forEach(x -> {
+			if (!lastTaskForResource.containsKey(x.getResource())) {
+				lastTaskForResource.put(x.getResource(), x);
+			} else {
+				int lastAccomplishmentDate = lastTaskForResource.get(x.getResource()).getStartingTime()
+						+ lastTaskForResource.get(x.getResource()).getTask().getProcessingTime();
+				if (x.getStartingTime() + x.getTask().getProcessingTime() >= lastAccomplishmentDate) {
+					lastTaskForResource.put(x.getResource(), x);
+				}
+			}
+		});
 	}
 
 	public List<Integer> plans() {

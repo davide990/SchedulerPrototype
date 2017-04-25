@@ -22,6 +22,8 @@ public interface Task {
 
 	List<ImmutablePair<Integer, Integer>> getPredecessors();
 
+	boolean hasPredecessor(int planID, int taskID);
+
 	String toHTMLString();
 
 	String toHTMLString(String textColor);

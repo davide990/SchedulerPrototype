@@ -11,7 +11,8 @@ public class TaskImpl implements Executable, Cloneable, Task {
 	final int taskID;
 	final int planID;
 	final int resourceID;
-	int releaseTime;
+	final int releaseTime;
+	final int dueDate;
 	final int processingTime;
 	final int planPriority;
 	/**
@@ -20,12 +21,13 @@ public class TaskImpl implements Executable, Cloneable, Task {
 	 */
 	final List<ImmutablePair<Integer, Integer>> predecessors;
 
-	TaskImpl(int taskID, int planID, int resourceID, int releaseTime, int processingTime, int planPriority,
+	TaskImpl(int taskID, int planID, int resourceID, int releaseTime, int dueDate, int processingTime, int planPriority,
 			List<ImmutablePair<Integer, Integer>> predecessors) {
 		this.taskID = taskID;
 		this.planID = planID;
 		this.resourceID = resourceID;
 		this.releaseTime = releaseTime;
+		this.dueDate = dueDate;
 		this.processingTime = processingTime;
 		this.planPriority = planPriority;
 		this.predecessors = new ArrayList<>(predecessors);
@@ -33,7 +35,8 @@ public class TaskImpl implements Executable, Cloneable, Task {
 
 	@Override
 	public Object clone() {
-		return TaskFactory.getTask(taskID, planID, resourceID, releaseTime, processingTime, planPriority, predecessors);
+		return TaskFactory.getTask(taskID, planID, resourceID, releaseTime, dueDate, processingTime, planPriority,
+				predecessors);
 	}
 
 	@Override
@@ -82,11 +85,7 @@ public class TaskImpl implements Executable, Cloneable, Task {
 
 	@Override
 	public int getDueDate() {
-		return releaseTime + processingTime;
-	}
-
-	public void updateReleaseTime(int deltaReleaseTime) {
-		this.releaseTime += releaseTime;
+		return dueDate;
 	}
 
 	/*
@@ -107,6 +106,11 @@ public class TaskImpl implements Executable, Cloneable, Task {
 	@Override
 	public List<ImmutablePair<Integer, Integer>> getPredecessors() {
 		return Collections.unmodifiableList(predecessors);
+	}
+
+	@Override
+	public boolean hasPredecessor(int planID, int taskID) {
+		return predecessors.contains(new ImmutablePair<>(planID, taskID));
 	}
 
 	@Override

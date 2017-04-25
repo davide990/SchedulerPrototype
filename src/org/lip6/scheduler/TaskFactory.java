@@ -8,8 +8,8 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 
 public class TaskFactory {
 
-	public static TaskImpl getTask(int taskID, int planID, int resourceID, int releaseTime, int processingTime,
-			int planPriority) {
+	public static TaskImpl getTask(int taskID, int planID, int resourceID, int releaseTime, int dueDate,
+			int processingTime, int planPriority) {
 
 		if (processingTime <= 0) {
 			throw new IllegalArgumentException("Processing time must be >= 0.");
@@ -18,10 +18,11 @@ public class TaskFactory {
 			throw new IllegalArgumentException("Release time must be > 0.");
 		}
 
-		return new TaskImpl(taskID, planID, resourceID, releaseTime, processingTime, planPriority, new ArrayList<>());
+		return new TaskImpl(taskID, planID, resourceID, releaseTime, dueDate, processingTime, planPriority,
+				new ArrayList<>());
 	}
 
-	public static Task getTask(int taskID, int planID, int resourceID, int releaseTime, int processingTime,
+	public static Task getTask(int taskID, int planID, int resourceID, int releaseTime, int dueDate, int processingTime,
 			int planPriority, List<ImmutablePair<Integer, Integer>> predecessors) {
 
 		if (processingTime <= 0) {
@@ -31,11 +32,13 @@ public class TaskFactory {
 			throw new IllegalArgumentException("Release time must be > 0.");
 		}
 
-		return new TaskImpl(taskID, planID, resourceID, releaseTime, processingTime, planPriority, predecessors);
+		return new TaskImpl(taskID, planID, resourceID, releaseTime, dueDate, processingTime, planPriority,
+				predecessors);
 	}
 
-	public static TaskImpl getTask(int taskID, int planID, int resourceID, int releaseTime, int processingTime,
-			int planPriority, List<ImmutablePair<Integer, Integer>> predecessors, Function<String[], Void> executionFunction) {
+	public static TaskImpl getTask(int taskID, int planID, int resourceID, int releaseTime, int dueDate,
+			int processingTime, int planPriority, List<ImmutablePair<Integer, Integer>> predecessors,
+			Function<String[], Void> executionFunction) {
 
 		if (processingTime <= 0) {
 			throw new IllegalArgumentException("Processing time must be >= 0.");
@@ -44,7 +47,8 @@ public class TaskFactory {
 			throw new IllegalArgumentException("Release time must be > 0.");
 		}
 
-		return new TaskImpl(taskID, planID, resourceID, releaseTime, processingTime, planPriority, predecessors) {
+		return new TaskImpl(taskID, planID, resourceID, releaseTime, dueDate, processingTime, planPriority,
+				predecessors) {
 			@Override
 			public void execute(String[] args) {
 				executionFunction.apply(args);
