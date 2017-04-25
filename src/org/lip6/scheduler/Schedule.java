@@ -3,11 +3,14 @@ package org.lip6.scheduler;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.PriorityQueue;
+import java.util.Queue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -33,7 +36,7 @@ public class Schedule implements Executable, Cloneable {
 	/**
 	 * The ordered set of task schedules
 	 */
-	private final List<TaskSchedule> schedule;
+	private final Queue<TaskSchedule> schedule;
 
 	private final static Logger logger = Logger.getLogger(Schedule.class.getName());
 
@@ -41,9 +44,14 @@ public class Schedule implements Executable, Cloneable {
 		this.numResources = numResources;
 		WStart = wStart;
 		WEnd = wEnd;
-		schedule = new ArrayList<>();
 		plans = new ArrayList<>();
 		lastTaskForResource = new HashMap<>();
+		schedule = new PriorityQueue<>(new Comparator<TaskSchedule>() {
+			@Override
+			public int compare(TaskSchedule o1, TaskSchedule o2) {
+				return Integer.compare(o1.getStartingTime(), o2.getStartingTime());
+			}
+		});
 	}
 
 	/**
@@ -158,7 +166,7 @@ public class Schedule implements Executable, Cloneable {
 	}
 
 	public List<TaskSchedule> taskSchedules() {
-		return Collections.unmodifiableList(schedule);
+		return Collections.unmodifiableList(new ArrayList<>(schedule));
 	}
 
 	public void unSchedule(Collection<TaskSchedule> collection) {
@@ -188,11 +196,6 @@ public class Schedule implements Executable, Cloneable {
 
 	public int resources() {
 		return numResources;
-	}
-
-	public boolean isFeasible() {
-		// TODO WRITE ME
-		return true;
 	}
 
 	@Override
