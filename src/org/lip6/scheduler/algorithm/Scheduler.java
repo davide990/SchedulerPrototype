@@ -102,10 +102,12 @@ public class Scheduler {
 		// MAIN LOOP
 		while (!plansQueue.isEmpty() || !tabuList.isEmpty()) {
 
+			// TABU LIST
 			// STEP 1 ------------------------------------------------------
 			if (!tabuList.isEmpty()) {
 				// Extract a tabu task from the list
 				TabuListEntry e = tabuList.poll();
+				
 				if (e.getWaitTurns() > 0) {
 					e.setWaitTurns(e.getWaitTurns() - 1);
 					tabuList.add(e);
@@ -118,10 +120,11 @@ public class Scheduler {
 				// parametro, allora scarta il piano
 
 				System.err.println("Checking " + e);
-
+				
+				// Check the precedence constraint
 				if (!checkPrecedences(workingSolution, e.getTask())) {
 					if (e.getNumTries() >= MAX_TABU_TRIES) {
-						// scarta il piano
+						// discard the plans
 						List<TaskSchedule> toRemove = workingSolution.taskSchedules().stream()
 								.filter(x -> x.getTask().getPlanID() == e.getPlan().getID())
 								.collect(Collectors.toList());
@@ -133,7 +136,7 @@ public class Scheduler {
 								+ " Discarded -> max number of tabu turns for plan " + e.getTask().getTaskID());
 
 					} else {
-
+						//Re-insert in tabu list and increase the number of tries done
 						e.setWaitTurns(MAX_TABU_TURNS);
 						e.increaseNumTries();
 						tabuList.add(e);

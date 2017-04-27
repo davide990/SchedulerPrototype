@@ -1,0 +1,6 @@
+Manifest-Version: 1.0
+Created-By: davide
+groupId: org.lip6
+artifactId: scheduler
+packaging: jar
+version: 1
