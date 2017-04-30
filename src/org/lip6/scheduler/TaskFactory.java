@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-import org.apache.commons.lang3.tuple.ImmutablePair;
-
 public class TaskFactory {
 
 	public static TaskImpl getTask(int taskID, int planID, int resourceID, int releaseTime, int dueDate,

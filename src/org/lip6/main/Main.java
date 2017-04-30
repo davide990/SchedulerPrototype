@@ -13,45 +13,23 @@ import org.lip6.scheduler.algorithm.Scheduler;
 public class Main {
 
 	public static void main(String[] args) {
-		// Map<Integer, Plan> p = null;
 		int WStart = 2;
 		int WEnd = 10;
-		int numResources = 3;
 		int maxResourceCapacity = 1;
 		List<Criteria> criterias = new ArrayList<>();
-
-		/*
-		 * try { p = CSVParser.parse("/home/davide/task_benchmark_papero.csv");
-		 * } catch (IOException e) { e.printStackTrace(); }
-		 * 
-		 * p.forEach((k, v) -> { System.out.println(v); });
-		 * 
-		 * List<Plan> plans = new ArrayList<>(p.values());
-		 */
-		// CRITERIA SETTING
 		criterias.add(new Criteria(Plan::getPriority, "Plan Priority", 1f));
 		criterias.add(new Criteria(Plan::getNumberOfTasks, "Number of Tasks", 0.1f));
 		criterias.add(new Criteria(Plan::getExecutionTime, "Estimated Execution Time", 0.01f));
 
-		// System.out.print("SET OF PLANS: ");
-		// System.out.println(plans.stream().map(x ->
-		// Integer.toString(x.getID())).collect(Collectors.joining(", ")));
-
-		// Schedule s = Scheduler.schedule(WStart, WEnd, criterias, plans);
-		// Schedule s = Scheduler.scheduleFromFile(WStart, WEnd, criterias,
-		// "/home/davide/task_benchmark_papero.csv");
-		Schedule s = Scheduler.scheduleFromFile(maxResourceCapacity, numResources, WStart, WEnd, criterias,
+		Schedule s = Scheduler.scheduleFromFile(maxResourceCapacity, WStart, WEnd, criterias,
 				"/home/davide/paper_plans.csv");
-		// System.out.println("Scheduled plans: " + s.plans().size() + " of " +
-		// plans.size());
-		System.out.println("Scheduling:\n" + s);
 
+		System.out.println("Scheduling:\n" + s);
 	}
 
 	void main2(String[] args) {
 		int WStart = 2;
 		int WEnd = 8;
-		int numResources = 3;
 		int maxResourceCapacity = 1;
 		List<Plan> plans = new ArrayList<>();
 		List<Criteria> criterias = new ArrayList<>();
@@ -60,8 +38,6 @@ public class Main {
 		PlanImpl p1 = PlanImpl.get(1, 9);
 		PlanImpl p2 = PlanImpl.get(2, 2);
 
-		// getTask(taskID, planID, resourceID, releaseTime, dueDate,
-		// processingTime)
 		p0.addTask(TaskFactory.getTask(0, 0, 0, 2, 4, 10, 5));
 		p0.addTask(TaskFactory.getTask(1, 0, 0, 6, 4, 10, 8));
 		p0.addTask(TaskFactory.getTask(2, 0, 0, 9, 4, 10, 14));
@@ -86,7 +62,7 @@ public class Main {
 			System.out.println("---> " + p.getID());
 		});
 
-		Schedule s = Scheduler.schedule(maxResourceCapacity, numResources, WStart, WEnd, criterias, plans);
+		Schedule s = Scheduler.schedule(maxResourceCapacity, WStart, WEnd, criterias, plans);
 		System.out.println("Scheduled plans: " + s.plans().size() + " of " + plans.size());
 
 		System.out.println("Scheduling:\n" + s);

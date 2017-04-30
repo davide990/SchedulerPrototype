@@ -2,8 +2,6 @@ package org.lip6.scheduler;
 
 import java.util.List;
 
-import org.apache.commons.lang3.tuple.ImmutablePair;
-
 public interface Task {
 
 	int getResourceID();
