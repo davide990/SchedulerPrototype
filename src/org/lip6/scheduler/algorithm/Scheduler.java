@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +36,8 @@ public class Scheduler {
 		}
 	};
 
-	public static Schedule scheduleFromFile(int WStart, int WEnd, List<Criteria> criterias, String filename) {
+	public static Schedule scheduleFromFile(int maxResourceCapacity, int numResources, int WStart, int WEnd,
+			List<Criteria> criterias, String filename) {
 		Map<Integer, Plan> p = null;
 		try {
 			p = CSVParser.parse(filename);
@@ -45,11 +48,12 @@ public class Scheduler {
 			e.printStackTrace();
 		}
 		List<Plan> plans = new ArrayList<>(p.values());
-		Schedule s = buildSchedule(plans, criterias, WStart, WEnd);
+		Schedule s = buildSchedule(maxResourceCapacity, numResources, plans, criterias, WStart, WEnd);
 		return s;
 	}
 
-	public static Schedule schedule(int WStart, int WEnd, List<Criteria> criterias, InputStream is) {
+	public static Schedule schedule(int maxResourceCapacity, int numResources, int WStart, int WEnd,
+			List<Criteria> criterias, InputStream is) {
 		Map<Integer, Plan> p = null;
 		try {
 			p = CSVParser.parse(is);
@@ -58,12 +62,13 @@ public class Scheduler {
 			return null;
 		}
 		List<Plan> plans = new ArrayList<>(p.values());
-		Schedule s = buildSchedule(plans, criterias, WStart, WEnd);
+		Schedule s = buildSchedule(maxResourceCapacity, numResources, plans, criterias, WStart, WEnd);
 		return s;
 	}
 
-	public static Schedule schedule(int WStart, int WEnd, List<Criteria> criterias, List<Plan> plans) {
-		Schedule s = buildSchedule(plans, criterias, WStart, WEnd);
+	public static Schedule schedule(int maxResourceCapacity, int numResources, int WStart, int WEnd,
+			List<Criteria> criterias, List<Plan> plans) {
+		Schedule s = buildSchedule(maxResourceCapacity, numResources, plans, criterias, WStart, WEnd);
 		return s;
 	}
 
@@ -73,9 +78,18 @@ public class Scheduler {
 	 * @param t
 	 * @param s
 	 */
-	private static Schedule buildSchedule(List<Plan> plans, List<Criteria> criterias, int wStart, int wEnd) {
-		Schedule workingSolution = Schedule.get(1, wStart, wEnd);
-		Schedule lastFeasibleSolution = Schedule.get(1, wStart, wEnd);
+	private static Schedule buildSchedule(final int maxResourceCapacity, final int numResources, List<Plan> plans,
+			List<Criteria> criterias, int wStart, int wEnd) {
+		Schedule workingSolution = Schedule.get(numResources, wStart, wEnd);
+		Schedule lastFeasibleSolution = Schedule.get(numResources, wStart, wEnd);
+		final int W = wEnd - wStart;
+
+		Map<Integer, Integer[]> resUtilization = new HashMap<>();
+		for (int i = 1; i <= numResources; i++) {
+			Integer[] ru = new Integer[W + 1];
+			Arrays.fill(ru, 0);
+			resUtilization.put(i, ru);
+		}
 
 		// TABU LIST
 		Queue<TabuListEntry> tabuList = new LinkedList<>();
@@ -101,13 +115,11 @@ public class Scheduler {
 
 		// MAIN LOOP
 		while (!plansQueue.isEmpty() || !tabuList.isEmpty()) {
-
-			// TABU LIST
 			// STEP 1 ------------------------------------------------------
 			if (!tabuList.isEmpty()) {
 				// Extract a tabu task from the list
 				TabuListEntry e = tabuList.poll();
-				
+
 				if (e.getWaitTurns() > 0) {
 					e.setWaitTurns(e.getWaitTurns() - 1);
 					tabuList.add(e);
@@ -120,7 +132,7 @@ public class Scheduler {
 				// parametro, allora scarta il piano
 
 				System.err.println("Checking " + e);
-				
+
 				// Check the precedence constraint
 				if (!checkPrecedences(workingSolution, e.getTask())) {
 					if (e.getNumTries() >= MAX_TABU_TRIES) {
@@ -136,7 +148,8 @@ public class Scheduler {
 								+ " Discarded -> max number of tabu turns for plan " + e.getTask().getTaskID());
 
 					} else {
-						//Re-insert in tabu list and increase the number of tries done
+						// Re-insert in tabu list and increase the number of
+						// tries done
 						e.setWaitTurns(MAX_TABU_TURNS);
 						e.increaseNumTries();
 						tabuList.add(e);
@@ -147,29 +160,42 @@ public class Scheduler {
 					// Precedence constraints are met here. Finally,
 					// schedule
 					// the task
-					int st = scheduleTask(e.getTask(), workingSolution);
-					if (!checkConstraints(e.getTask(), st, workingSolution)) {
-						System.err.println("Task " + e.getTask() + " DO NOT MEET CONSTRAINTS.");
-						e.getPlan().setSchedulable(false);
-					}
-					
-					if (e.getPlan().isSchedulable()) {
-						try {
-							lastFeasibleSolution = (Schedule) workingSolution.clone();
-						} catch (CloneNotSupportedException ee) {
-							ee.printStackTrace();
-						}
-						// push pk into the queue of scheduled plans
-						scheduledPlans.add(e.getPlan());
-					} else {
+					if (!tryScheduleTask(maxResourceCapacity, workingSolution, e.getTask(), resUtilization)) {
+						System.err.println("I'M IN TABU FOR " + e.getTask());
+						// pk is NOT schedulable: take all its tasks and remove
+						// them
+						// from the solution
 						List<TaskSchedule> toRemove = workingSolution.taskSchedules().stream()
 								.filter(x -> x.getTask().getPlanID() == e.getPlan().getID())
 								.collect(Collectors.toList());
 						workingSolution.unSchedule(toRemove);
+						// Push pk into the queue of unscheduled plans
 						unscheduledPlans.add(e.getPlan());
+
 					}
+					/*
+					 * int st = scheduleTask(e.getTask(), workingSolution); if
+					 * (!checkConstraints(e.getTask(), st, workingSolution)) {
+					 * System.err.println("Task " + e.getTask() +
+					 * " DO NOT MEET CONSTRAINTS.");
+					 * e.getPlan().setSchedulable(false); }
+					 * 
+					 * if (e.getPlan().isSchedulable()) { try {
+					 * lastFeasibleSolution = (Schedule)
+					 * workingSolution.clone(); } catch
+					 * (CloneNotSupportedException ee) { ee.printStackTrace(); }
+					 * // push pk into the queue of scheduled plans
+					 * scheduledPlans.add(e.getPlan()); } else {
+					 * List<TaskSchedule> toRemove =
+					 * workingSolution.taskSchedules().stream() .filter(x ->
+					 * x.getTask().getPlanID() == e.getPlan().getID())
+					 * .collect(Collectors.toList());
+					 * workingSolution.unSchedule(toRemove);
+					 * unscheduledPlans.add(e.getPlan()); } }
+					 */
 				}
 			}
+
 			// STEP 2 ------------------------------------------------------
 			// Get the highest scored plan from the sorted queue
 			Plan pk = plansQueue.poll();
@@ -182,7 +208,7 @@ public class Scheduler {
 
 			// Loop each task t in the plan pk
 			for (Task t : pk.tasks()) {
-
+				System.out.println("------ >TASK " + t.getTaskID());
 				// Check precedence constraints
 				if (!checkPrecedences(workingSolution, t)) {
 					System.err.println("Adding " + t + " to tabu list");
@@ -190,12 +216,10 @@ public class Scheduler {
 					hasTabuTask = true;
 					continue;
 				}
-				// if satisfied -> proceed
-				int st = scheduleTask(t, workingSolution);
-				System.out.println("Plan #" + pk.getID() + ": Task " + t.getResourceID() + " scheduled at "
-						+ Integer.toString(st));
-				if (!checkConstraints(t, st, workingSolution)) {
+
+				if (!tryScheduleTask(maxResourceCapacity, workingSolution, t, resUtilization)) {
 					pk.setSchedulable(false);
+					break;
 				}
 			}
 
@@ -228,6 +252,84 @@ public class Scheduler {
 
 		return lastFeasibleSolution;
 
+	}
+
+	private static boolean tryScheduleTask(final int maxResourceCapacity, Schedule s, Task t,
+			Map<Integer, Integer[]> resUtilizationMap) {
+		// Take the scheduled predecessors of t (within the same plan)
+		List<TaskSchedule> f = s.taskSchedules().stream().filter(
+				x -> x.getTask().getPlanID() == t.getPlanID() && t.getPredecessors().contains(x.getTask().getTaskID()))
+				.collect(Collectors.toList());
+
+		// From the set of scheduled predecessors, take the maximum
+		// accomplishment date
+		OptionalInt maxPredecessorAccomplishmentDate = f.stream()
+				.mapToInt(x -> x.getStartingTime() + x.getTask().getProcessingTime()).max();
+
+		int st = t.getReleaseTime();
+		if (maxPredecessorAccomplishmentDate.isPresent()) {
+			st = maxPredecessorAccomplishmentDate.getAsInt();
+		}
+
+		int resourceCapacity = maxResourceCapacity;
+		int shifted_st = st;
+		System.err.println("FOR " + t + " st: " + Integer.toString(st));
+
+		Integer[] res = resUtilizationMap.get(t.getResourceID());
+		System.err.println("Resource #" + Integer.toString(t.getResourceID()) + "(before): " + Arrays.toString(res));
+
+		if (t.getTaskID() == 2 && t.getPlanID() == 2) {
+			System.err.println(".");
+		}
+
+		for (int k = st - s.getWStart(); k < res.length - t.getProcessingTime(); k++) {
+
+			int a = res[k];
+			int b = res[k + t.getProcessingTime()];
+
+			int resUse = Math.max(a, b);
+			System.err
+					.println("k: " + Integer.toString(k) + " st: " + Integer.toString(st) + " r[" + Integer.toString(k)
+							+ "]: " + Integer.toString(a) + " r[" + Integer.toString(k + t.getProcessingTime()) + "]: "
+							+ Integer.toString(b) + " resUse: " + Integer.toString(resUse));
+
+			if (resUse < resourceCapacity && resUse + 1 <= maxResourceCapacity
+					&& checkConstraints(t, k + s.getWStart(), s)) {
+				resourceCapacity = resUse;
+				shifted_st = k;
+				System.err.println("[BEST SLOT] For " + t + ", best slot = " + Integer.toString(shifted_st));
+			}
+		}
+
+		// sposto la starting time
+		st = shifted_st + s.getWStart();
+
+		System.out.println("Plan #" + t.getPlanID() + ": " + t + " scheduled at " + Integer.toString(st));
+
+		if (!checkConstraints(t, st, s)) {
+			return false;
+		}
+
+		// Qui il task può essere schedulato, dunque entra in W/[rk,dk]. E'
+		// necessario però verificare l'utilizzo della risosa poichè è possibile
+		// che non sia stata trovata un posizione migliore per il task e nella
+		// posizione attuale l'utilizzo della risorsa supera il limite imposto
+		if (res[st - s.getWStart()] + 1 > maxResourceCapacity
+				|| res[st - s.getWStart() + t.getProcessingTime()] + 1 > maxResourceCapacity) {
+			return false;
+		}
+
+		// Se i vincoli sono soddisfatti, schedula il task
+		s.add(st, t);
+
+		for (int i = st - s.getWStart(); i < st - s.getWStart() + t.getProcessingTime(); i++) {
+			res[i]++;
+		}
+
+		resUtilizationMap.put(t.getResourceID(), res);
+		System.err.println("Resource #" + Integer.toString(t.getResourceID()) + "(after):  "
+				+ Arrays.toString(resUtilizationMap.get(t.getResourceID())));
+		return true;
 	}
 
 	/**
@@ -305,15 +407,29 @@ public class Scheduler {
 	private static boolean checkPrecedences(Schedule s, Task t) {
 		// From the list of the actually scheduled task, take those who are
 		// predecessors of the task t
-		final List<ImmutablePair<Integer, Integer>> scheduledPlanTaskPairs = s.taskSchedules().stream()
-				.map(x -> new ImmutablePair<>(x.getTask().getPlanID(), x.getTask().getTaskID()))
+		/*
+		 * final List<ImmutablePair<Integer, Integer>> scheduledPlanTaskPairs =
+		 * s.taskSchedules().stream() .map(x -> new
+		 * ImmutablePair<>(x.getTask().getPlanID(), x.getTask().getTaskID()))
+		 * .collect(Collectors.toList());
+		 */
+
+		List<Integer> scheduledPredecessors = s.taskSchedules().stream()
+				.filter(x -> x.getTask().getPlanID() == t.getPlanID()).map(x -> x.getTask().getTaskID())
 				.collect(Collectors.toList());
 
-		for (ImmutablePair<Integer, Integer> pair : t.getPredecessors()) {
-			if (!scheduledPlanTaskPairs.contains(pair)) {
+		// Precedeces between tasks of the SAME plan
+		for (Integer p : t.getPredecessors()) {
+			if (!scheduledPredecessors.contains(p)) {
 				return false;
 			}
 		}
+		// CHECK PRECEDENCES
+		/*
+		 * for (ImmutablePair<Integer, Integer> pair : t.getPredecessors()) { if
+		 * (!scheduledPlanTaskPairs.contains(pair)) { return false; } }
+		 */
+
 		return true;
 	}
 
@@ -348,9 +464,16 @@ public class Scheduler {
 		// otherwise the accomplishment of the last scheduled task for the
 		// resource demanded by the task t to be scheduled
 		int md = 0;
-		if (!maxPredecessorAccomplishmentDate.isPresent()) {
-			md = s.getAccomplishmentForLastTaskIn(t.getResourceID());
-		} else {
+		/*
+		 * if (!maxPredecessorAccomplishmentDate.isPresent()) {
+		 * 
+		 * // ---Modifica qui --- // Parti da rk e scorri finchè non trovi una
+		 * sk che soddisfa i // vincoli md =
+		 * s.getAccomplishmentForLastTaskIn(t.getResourceID()); } else { md =
+		 * maxPredecessorAccomplishmentDate.getAsInt(); }
+		 */
+
+		if (maxPredecessorAccomplishmentDate.isPresent()) {
 			md = maxPredecessorAccomplishmentDate.getAsInt();
 		}
 

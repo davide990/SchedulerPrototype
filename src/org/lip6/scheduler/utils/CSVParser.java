@@ -56,7 +56,9 @@ public class CSVParser {
 			int releaseTime = Integer.parseInt(record.get("releaseTime"));
 			int dueDate = Integer.parseInt(record.get("dueDate"));
 			int processingTime = Integer.parseInt(record.get("processingTime"));
-			List<ImmutablePair<Integer, Integer>> predecessors = parsePrecedences(record.get("predecessors"));
+			
+			
+			List<Integer> predecessors = parsePrecedences(record.get("predecessors"));
 
 			// Put the plan ID to the map if it's not already in.
 			plans.putIfAbsent(planID, PlanImpl.get(planID, planPriority));
@@ -69,7 +71,36 @@ public class CSVParser {
 		return plans;
 
 	}
+	
+	
+	
+	private static List<Integer> parsePrecedences(String precedences) throws ParseException {
+		//List<Integer> taskPredecessors = new ArrayList<>();
 
+		// If the string is not empty, there is at least one precedence relation
+		// specified in the CSV
+		if (precedences.length() > 0) {
+			// Split the string by using the specified separator character
+			//List<String> stpr = Arrays.asList(precedences.trim().split(";"));
+			// Convert each string to an integer
+			//List<Integer> pr = stpr.stream().map(x -> Integer.parseInt(x)).collect(Collectors.toList());
+			return Arrays.asList(precedences.trim().split(";")).stream().map(x -> Integer.parseInt(x))
+					.collect(Collectors.toList());
+			// If the size of the list is not even, the precedence relations are
+			// not well specified, so an exception is throwed
+			/*if (pr.size() % 2 != 0) {
+				throw new ParseException("Wrong precedence list.", 0);
+			}*/
+
+			// Create the list of (plan,task) pairs
+			/*for (int i = 0; i < pr.size() - 1; i += 2) {
+				taskPredecessors.add(new ImmutablePair<Integer, Integer>(pr.get(i), pr.get(i + 1)));
+			}*/
+		}
+		return new ArrayList<>();
+	}
+
+	/*
 	private static List<ImmutablePair<Integer, Integer>> parsePrecedences(String precedences) throws ParseException {
 		List<ImmutablePair<Integer, Integer>> taskPredecessors = new ArrayList<>();
 
@@ -93,7 +124,7 @@ public class CSVParser {
 			}
 		}
 		return taskPredecessors;
-	}
+	}*/
 
 	public static void serialize(List<Plan> plans, String fname) throws IOException {
 		final FileWriter fout = new FileWriter(fname);

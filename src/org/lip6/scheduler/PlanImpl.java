@@ -1,8 +1,10 @@
 package org.lip6.scheduler;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -20,6 +22,7 @@ public class PlanImpl implements Plan, Executable {
 	private float planScore;
 
 	final LinkedHashMap<Integer, Task> tasks = new LinkedHashMap<>();
+	final List<Integer> predecessors;
 
 	private final static Logger logger = Logger.getLogger(PlanImpl.class.getName());
 
@@ -29,6 +32,7 @@ public class PlanImpl implements Plan, Executable {
 		this.priority = priority;
 		this.executionTime = 0;
 		this.schedulable = true;
+		predecessors = new ArrayList<>();
 		startTime = Integer.MAX_VALUE;
 		endTime = Integer.MIN_VALUE;
 	}
@@ -38,6 +42,21 @@ public class PlanImpl implements Plan, Executable {
 			throw new IllegalArgumentException("Priority must be >= 0.");
 		}
 		return new PlanImpl(ID, priority);
+	}
+
+	public static PlanImpl get(int ID, int priority, List<Integer> predecessors) {
+		if (priority < 0) {
+			throw new IllegalArgumentException("Priority must be >= 0.");
+		}
+
+		PlanImpl p = new PlanImpl(ID, priority);
+		p.predecessors.addAll(predecessors);
+		return p;
+	}
+
+	@Override
+	public List<Integer> predecessors() {
+		return Collections.unmodifiableList(predecessors);
 	}
 
 	@Override

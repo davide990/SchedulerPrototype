@@ -19,10 +19,11 @@ public class TaskImpl implements Executable, Cloneable, Task {
 	 * A map containing as key the ID of a plan and as value a list of tasks
 	 * which precedes this task.
 	 */
-	final List<ImmutablePair<Integer, Integer>> predecessors;
+	// final List<ImmutablePair<Integer, Integer>> predecessors;
+	final List<Integer> predecessors;
 
 	TaskImpl(int taskID, int planID, int resourceID, int releaseTime, int dueDate, int processingTime, int planPriority,
-			List<ImmutablePair<Integer, Integer>> predecessors) {
+			List<Integer> predecessors) {
 		this.taskID = taskID;
 		this.planID = planID;
 		this.resourceID = resourceID;
@@ -30,6 +31,7 @@ public class TaskImpl implements Executable, Cloneable, Task {
 		this.dueDate = dueDate;
 		this.processingTime = processingTime;
 		this.planPriority = planPriority;
+		// this.predecessors = new ArrayList<>(predecessors);
 		this.predecessors = new ArrayList<>(predecessors);
 	}
 
@@ -104,7 +106,7 @@ public class TaskImpl implements Executable, Cloneable, Task {
 	 * @see org.lip6.scheduler.Task#getPredecessors()
 	 */
 	@Override
-	public List<ImmutablePair<Integer, Integer>> getPredecessors() {
+	public List<Integer> getPredecessors() {
 		return Collections.unmodifiableList(predecessors);
 	}
 
@@ -145,7 +147,7 @@ public class TaskImpl implements Executable, Cloneable, Task {
 
 	@Override
 	public String toString() {
-		return "Task [taskID=" + taskID + ", planID=" + planID + "]";
+		return "TaskImpl [taskID=" + taskID + ", planID=" + planID + ", processingTime=" + processingTime + "]";
 	}
 
 	@Override

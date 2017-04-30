@@ -23,7 +23,7 @@ public class TaskFactory {
 	}
 
 	public static Task getTask(int taskID, int planID, int resourceID, int releaseTime, int dueDate, int processingTime,
-			int planPriority, List<ImmutablePair<Integer, Integer>> predecessors) {
+			int planPriority, List<Integer> predecessors) {
 
 		if (processingTime <= 0) {
 			throw new IllegalArgumentException("Processing time must be >= 0.");
@@ -37,7 +37,7 @@ public class TaskFactory {
 	}
 
 	public static TaskImpl getTask(int taskID, int planID, int resourceID, int releaseTime, int dueDate,
-			int processingTime, int planPriority, List<ImmutablePair<Integer, Integer>> predecessors,
+			int processingTime, int planPriority, List<Integer> predecessors,
 			Function<String[], Void> executionFunction) {
 
 		if (processingTime <= 0) {

@@ -15,7 +15,9 @@ public class Main {
 	public static void main(String[] args) {
 		// Map<Integer, Plan> p = null;
 		int WStart = 2;
-		int WEnd = 15;
+		int WEnd = 10;
+		int numResources = 3;
+		int maxResourceCapacity = 1;
 		List<Criteria> criterias = new ArrayList<>();
 
 		/*
@@ -38,7 +40,8 @@ public class Main {
 		// Schedule s = Scheduler.schedule(WStart, WEnd, criterias, plans);
 		// Schedule s = Scheduler.scheduleFromFile(WStart, WEnd, criterias,
 		// "/home/davide/task_benchmark_papero.csv");
-		Schedule s = Scheduler.scheduleFromFile(WStart, WEnd, criterias, "/home/davide/paper_plans.csv");
+		Schedule s = Scheduler.scheduleFromFile(maxResourceCapacity, numResources, WStart, WEnd, criterias,
+				"/home/davide/paper_plans.csv");
 		// System.out.println("Scheduled plans: " + s.plans().size() + " of " +
 		// plans.size());
 		System.out.println("Scheduling:\n" + s);
@@ -48,6 +51,8 @@ public class Main {
 	void main2(String[] args) {
 		int WStart = 2;
 		int WEnd = 8;
+		int numResources = 3;
+		int maxResourceCapacity = 1;
 		List<Plan> plans = new ArrayList<>();
 		List<Criteria> criterias = new ArrayList<>();
 
@@ -81,7 +86,7 @@ public class Main {
 			System.out.println("---> " + p.getID());
 		});
 
-		Schedule s = Scheduler.schedule(WStart, WEnd, criterias, plans);
+		Schedule s = Scheduler.schedule(maxResourceCapacity, numResources, WStart, WEnd, criterias, plans);
 		System.out.println("Scheduled plans: " + s.plans().size() + " of " + plans.size());
 
 		System.out.println("Scheduling:\n" + s);
