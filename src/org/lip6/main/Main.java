@@ -17,12 +17,12 @@ public class Main {
 		int WEnd = 10;
 		int maxResourceCapacity = 1;
 		List<Criteria> criterias = new ArrayList<>();
-		criterias.add(new Criteria(Plan::getPriority, "Plan Priority", 1f));
+		criterias.add(new Criteria(Plan::getInversePriority, "Plan Priority", 1f));
 		criterias.add(new Criteria(Plan::getNumberOfTasks, "Number of Tasks", 0.1f));
 		criterias.add(new Criteria(Plan::getExecutionTime, "Estimated Execution Time", 0.01f));
 
 		Schedule s = Scheduler.scheduleFromFile(maxResourceCapacity, WStart, WEnd, criterias,
-				"/home/davide/paper_plans.csv");
+				"/home/davide/paper_plans_nouveau.csv");
 
 		System.out.println("Scheduling:\n" + s);
 	}

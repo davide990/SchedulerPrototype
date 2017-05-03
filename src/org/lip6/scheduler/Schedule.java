@@ -34,7 +34,8 @@ public class Schedule implements Executable, Cloneable {
 	private final List<Integer> plans;
 
 	/**
-	 * The ordered set of task schedules
+	 * The set of task schedules. These are ordered according to the starting
+	 * times of the schedules.
 	 */
 	private final Queue<TaskSchedule> schedule;
 
@@ -97,8 +98,7 @@ public class Schedule implements Executable, Cloneable {
 			}
 		});
 
-		plans.forEach(p -> s.plans.add(p));
-
+		s.plans.addAll(plans);
 		return s;
 	}
 

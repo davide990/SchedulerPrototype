@@ -22,7 +22,7 @@ public class PlanImpl implements Plan, Executable {
 	private float planScore;
 
 	final LinkedHashMap<Integer, Task> tasks = new LinkedHashMap<>();
-	final List<Integer> predecessors;
+	final List<Integer> successors;
 
 	private final static Logger logger = Logger.getLogger(PlanImpl.class.getName());
 
@@ -32,7 +32,7 @@ public class PlanImpl implements Plan, Executable {
 		this.priority = priority;
 		this.executionTime = 0;
 		this.schedulable = true;
-		predecessors = new ArrayList<>();
+		successors = new ArrayList<>();
 		startTime = Integer.MAX_VALUE;
 		endTime = Integer.MIN_VALUE;
 	}
@@ -44,19 +44,20 @@ public class PlanImpl implements Plan, Executable {
 		return new PlanImpl(ID, priority);
 	}
 
-	public static PlanImpl get(int ID, int priority, List<Integer> predecessors) {
+	public static PlanImpl get(int ID, int priority, List<Integer> successors) {
 		if (priority < 0) {
 			throw new IllegalArgumentException("Priority must be >= 0.");
 		}
 
 		PlanImpl p = new PlanImpl(ID, priority);
-		p.predecessors.addAll(predecessors);
+		// Prevent adding duplicates
+		p.successors.addAll(successors.stream().distinct().collect(Collectors.toList()));
 		return p;
 	}
 
 	@Override
-	public List<Integer> predecessors() {
-		return Collections.unmodifiableList(predecessors);
+	public List<Integer> successors() {
+		return Collections.unmodifiableList(successors);
 	}
 
 	@Override

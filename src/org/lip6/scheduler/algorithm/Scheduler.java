@@ -12,12 +12,14 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
+import java.util.Stack;
 import java.util.stream.Collectors;
-
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.lip6.scheduler.Plan;
 import org.lip6.scheduler.Schedule;
 import org.lip6.scheduler.Task;
@@ -33,7 +35,7 @@ public class Scheduler {
 	private static final Comparator<Plan> PLAN_COMPARATOR = new Comparator<Plan>() {
 		@Override
 		public int compare(Plan o1, Plan o2) {
-			return -Float.compare(o1.getScore(), o2.getScore());
+			return Float.compare(o1.getScore(), o2.getScore());
 		}
 	};
 
@@ -118,7 +120,7 @@ public class Scheduler {
 		// priority queue
 		plans.forEach(p -> plansQueue.add(p));
 		plansQueue.forEach(p -> System.out
-				.println("plan added: " + Integer.toString(p.getID()) + ", score:" + Float.toString(p.getScore())));
+				.println("plan added: " + Integer.toString(p.getID()) + ", score: " + Float.toString(p.getScore())));
 
 		// MAIN LOOP
 		while (!plansQueue.isEmpty() || !tabuList.isEmpty()) {
@@ -176,7 +178,6 @@ public class Scheduler {
 			if (pk == null) {
 				continue;
 			}
-
 			boolean hasTabuTask = false;
 
 			// Loop each task t in the plan pk
@@ -314,6 +315,109 @@ public class Scheduler {
 	}
 
 	/**
+	 * 
+	 * @param plans
+	 */
+	private static List<ImmutablePair<Integer, Integer>> calculateTopologicalOrderScores(List<Plan> plans) {
+		// Find the root node, that is, the node which doesn't appair as
+		// successor of all the other nodes
+		Optional<Plan> root = Optional.empty();
+		for (Plan p : plans) {
+			if (plans.stream().filter(x -> x.successors().contains(p.getID())).count() == 0) {
+				root = Optional.of(p);
+				break;
+			}
+		}
+
+		// If such node is not found, throw an exception
+		if (!root.isPresent()) {
+			throw new IllegalArgumentException("Wrong plans precedences. No valid root node found.");
+		}
+
+		Stack<Plan> sortedPlans = topologicalSort(plans);
+		List<ImmutablePair<Integer, Integer>> scores = new ArrayList<>();
+		int score = 1;
+		while (!sortedPlans.empty()) {
+			scores.add(new ImmutablePair<Integer, Integer>(sortedPlans.pop().getID(), score++));
+		}
+		return scores;
+	}
+
+	// The function to do Topological Sort. It uses
+	// recursive topologicalSortUtil()
+	private static Stack<Plan> topologicalSort(final List<Plan> plans) {
+		Stack<Plan> stack = new Stack<>();
+
+		// Mark all the vertices as not visited
+		Map<Integer, Boolean> visitedPlans = new HashMap<>();
+		for (int i = 0; i < plans.size(); i++) {
+			visitedPlans.put(plans.get(i).getID(), false);
+		}
+
+		// Call the recursive helper function to store Topological Sort starting
+		// from all vertices one by one
+		for (int i = 0; i < plans.size(); i++) {
+			if (visitedPlans.get(plans.get(i).getID()) == false) {
+				topologicalSortUtil(plans.get(i), plans, visitedPlans, stack);
+			}
+		}
+
+		// Print contents of stack
+		/*
+		 * while (stack.empty() == false) { System.out.print(stack.pop().getID()
+		 * + " "); }
+		 */
+
+		return stack;
+	}
+
+	static void topologicalSortUtil(Plan plan, final List<Plan> plans, Map<Integer, Boolean> visited,
+			Stack<Plan> stack) {
+		// Mark the current node as visited.
+		visited.put(plan.getID(), true);
+
+		for (Integer successor : plan.successors()) {
+			if (!visited.get(successor)) {
+				Optional<Plan> s = plans.stream().filter(x -> x.getID() == successor).findFirst();
+				if (s.isPresent()) {
+					topologicalSortUtil(s.get(), plans, visited, stack);
+				}
+			}
+		}
+
+		// Push current vertex to stack which stores result
+		stack.push(plan);
+	}
+
+	/**
+	 * 
+	 * See <a href=
+	 * "https://en.wikipedia.org/wiki/Depth-first_search#Pseudocode">Depth-first
+	 * search</a>
+	 */
+	private static List<Integer> dfs(Plan root, List<Plan> plans) {
+		Stack<Plan> stack = new Stack<>();
+		List<Integer> visitedPlansID = new ArrayList<>();
+
+		stack.push(root);
+		visitedPlansID.add(root.getID());
+		while (!stack.empty()) {
+			Plan p = stack.pop();
+			// Handle successors
+			for (Integer successor : p.successors()) {
+				if (!visitedPlansID.contains(successor)) {
+					Optional<Plan> s = plans.stream().filter(x -> x.getID() == successor).findFirst();
+					if (s.isPresent()) {
+						stack.push(s.get());
+						visitedPlansID.add(successor);
+					}
+				}
+			}
+		}
+		return visitedPlansID;
+	}
+
+	/**
 	 * Calculate the scores for the given plans, according to the input criteria
 	 * 
 	 * @param plans
@@ -321,6 +425,8 @@ public class Scheduler {
 	 * @return
 	 */
 	private static List<Float> calculatePlanScore(List<Plan> plans, List<Criteria> criterias) {
+		List<ImmutablePair<Integer, Integer>> orderScore = calculateTopologicalOrderScores(plans);
+
 		List<Float> scores = new ArrayList<>();
 		// Iterate each plan
 		for (Plan plan : plans) {
@@ -331,6 +437,9 @@ public class Scheduler {
 				// the current plan, and add the resulting value to the score
 				score += criterias.get(i).getCriteriaFunc().apply(plan) * criterias.get(i).getWeight();
 			}
+			int toAdd = orderScore.stream().filter(x -> x.getLeft() == plan.getID()).mapToInt(x -> x.getRight()).sum();
+			score += toAdd;
+
 			// Set the score for the current plan
 			plan.setScore(score);
 			scores.add(score);

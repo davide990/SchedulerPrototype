@@ -25,7 +25,7 @@ import org.lip6.scheduler.TaskFactory;
 public class CSVParser {
 
 	private enum csvHeaders {
-		taskID, planID, planPriority, resourceID, releaseTime, dueDate, processingTime, predecessors
+		taskID, planID, planPriority, resourceID, releaseTime, dueDate, processingTime, planSuccessors, taskPredecessors
 	}
 
 	public static Map<Integer, Plan> parse(InputStream inputStream) throws IOException, ParseException {
@@ -55,18 +55,26 @@ public class CSVParser {
 			int releaseTime = Integer.parseInt(record.get("releaseTime"));
 			int dueDate = Integer.parseInt(record.get("dueDate"));
 			int processingTime = Integer.parseInt(record.get("processingTime"));
-			List<Integer> predecessors = parsePrecedences(record.get("predecessors"));
+			List<Integer> planSuccessors = parsePrecedences(record.get("planSuccessors"));
+			List<Integer> taskPredecessors = parsePrecedences(record.get("taskPredecessors"));
 
 			// Put the plan ID to the map if it's not already in.
-			plans.putIfAbsent(planID, PlanImpl.get(planID, planPriority));
+			plans.putIfAbsent(planID, PlanImpl.get(planID, planPriority, planSuccessors));
 
 			// Add the task to the plans' map
 			plans.get(planID).addTask(TaskFactory.getTask(taskID, planID, resourceID, releaseTime, dueDate,
-					processingTime, planPriority, predecessors));
+					processingTime, planPriority, taskPredecessors));
 		}
 		return plans;
 	}
 
+	/**
+	 * Parse a predecessors string, that is, a list of numbers separater by ';'
+	 * 
+	 * @param precedences
+	 * @return
+	 * @throws ParseException
+	 */
 	private static List<Integer> parsePrecedences(String precedences) throws ParseException {
 		// If the string is not empty, there is at least one precedence relation
 		// specified in the CSV

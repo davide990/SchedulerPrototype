@@ -8,7 +8,7 @@ public interface Plan {
 
 	Collection<Task> tasks();
 	
-	List<Integer> predecessors();
+	List<Integer> successors();
 
 	Task getTask(int taskID);
 
