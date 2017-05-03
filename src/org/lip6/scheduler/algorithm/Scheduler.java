@@ -318,7 +318,7 @@ public class Scheduler {
 	 * 
 	 * @param plans
 	 */
-	private static List<ImmutablePair<Integer, Integer>> calculateTopologicalOrderScores(List<Plan> plans) {
+	private static Stack<ImmutablePair<Integer, Integer>> calculateTopologicalOrderScores(List<Plan> plans) {
 		// Find the root node, that is, the node which doesn't appair as
 		// successor of all the other nodes
 		Optional<Plan> root = Optional.empty();
@@ -333,20 +333,24 @@ public class Scheduler {
 		if (!root.isPresent()) {
 			throw new IllegalArgumentException("Wrong plans precedences. No valid root node found.");
 		}
-
-		Stack<Plan> sortedPlans = topologicalSort(plans);
-		List<ImmutablePair<Integer, Integer>> scores = new ArrayList<>();
-		int score = 1;
-		while (!sortedPlans.empty()) {
-			scores.add(new ImmutablePair<Integer, Integer>(sortedPlans.pop().getID(), score++));
-		}
-		return scores;
+		return topologicalSort(plans);
+		/*
+		 * Stack<ImmutablePair<Integer, Integer>> sortedPlans =
+		 * topologicalSort(plans); List<ImmutablePair<Integer, Integer>> scores
+		 * = new ArrayList<>(); while (!sortedPlans.empty()) {
+		 * scores.add(sortedPlans.pop()); } return scores;
+		 */
 	}
 
-	// The function to do Topological Sort. It uses
-	// recursive topologicalSortUtil()
-	private static Stack<Plan> topologicalSort(final List<Plan> plans) {
-		Stack<Plan> stack = new Stack<>();
+	/**
+	 * Topological sorting of the plans. It returns a stack of pairs
+	 * <b>(A,B)</b> where <b>A</b> is the index of a plan, and <b>B</b> is the
+	 * index of the frontier the plan A belongs to.
+	 * 
+	 * @see Cormen Cormen et al.(2001), chapter 22.
+	 */
+	private static Stack<ImmutablePair<Integer, Integer>> topologicalSort(final List<Plan> plans) {
+		Stack<ImmutablePair<Integer, Integer>> stack = new Stack<>();
 
 		// Mark all the vertices as not visited
 		Map<Integer, Boolean> visitedPlans = new HashMap<>();
@@ -356,65 +360,37 @@ public class Scheduler {
 
 		// Call the recursive helper function to store Topological Sort starting
 		// from all vertices one by one
+		int frontierStartIndex = 0;
 		for (int i = 0; i < plans.size(); i++) {
 			if (visitedPlans.get(plans.get(i).getID()) == false) {
-				topologicalSortUtil(plans.get(i), plans, visitedPlans, stack);
+				topologicalSortUtil(plans.get(i), plans, visitedPlans, stack, frontierStartIndex);
 			}
 		}
-
-		// Print contents of stack
-		/*
-		 * while (stack.empty() == false) { System.out.print(stack.pop().getID()
-		 * + " "); }
-		 */
 
 		return stack;
 	}
 
 	static void topologicalSortUtil(Plan plan, final List<Plan> plans, Map<Integer, Boolean> visited,
-			Stack<Plan> stack) {
+			Stack<ImmutablePair<Integer, Integer>> stack, int frontierIndex) {
 		// Mark the current node as visited.
 		visited.put(plan.getID(), true);
+
+		frontierIndex++;
 
 		for (Integer successor : plan.successors()) {
 			if (!visited.get(successor)) {
 				Optional<Plan> s = plans.stream().filter(x -> x.getID() == successor).findFirst();
 				if (s.isPresent()) {
-					topologicalSortUtil(s.get(), plans, visited, stack);
+					topologicalSortUtil(s.get(), plans, visited, stack, frontierIndex);
 				}
 			}
 		}
+
+		System.err.println("[TOPOLOGICAL SORTING] Pushing plan #" + Integer.toString(plan.getID()) + " with j: "
+				+ Integer.toString(frontierIndex));
 
 		// Push current vertex to stack which stores result
-		stack.push(plan);
-	}
-
-	/**
-	 * 
-	 * See <a href=
-	 * "https://en.wikipedia.org/wiki/Depth-first_search#Pseudocode">Depth-first
-	 * search</a>
-	 */
-	private static List<Integer> dfs(Plan root, List<Plan> plans) {
-		Stack<Plan> stack = new Stack<>();
-		List<Integer> visitedPlansID = new ArrayList<>();
-
-		stack.push(root);
-		visitedPlansID.add(root.getID());
-		while (!stack.empty()) {
-			Plan p = stack.pop();
-			// Handle successors
-			for (Integer successor : p.successors()) {
-				if (!visitedPlansID.contains(successor)) {
-					Optional<Plan> s = plans.stream().filter(x -> x.getID() == successor).findFirst();
-					if (s.isPresent()) {
-						stack.push(s.get());
-						visitedPlansID.add(successor);
-					}
-				}
-			}
-		}
-		return visitedPlansID;
+		stack.push(new ImmutablePair<Integer, Integer>(plan.getID(), frontierIndex));
 	}
 
 	/**
@@ -425,7 +401,7 @@ public class Scheduler {
 	 * @return
 	 */
 	private static List<Float> calculatePlanScore(List<Plan> plans, List<Criteria> criterias) {
-		List<ImmutablePair<Integer, Integer>> orderScore = calculateTopologicalOrderScores(plans);
+		Stack<ImmutablePair<Integer, Integer>> orderScore = calculateTopologicalOrderScores(plans);
 
 		List<Float> scores = new ArrayList<>();
 		// Iterate each plan
