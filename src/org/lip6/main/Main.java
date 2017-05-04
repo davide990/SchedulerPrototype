@@ -13,7 +13,7 @@ import org.lip6.scheduler.algorithm.Scheduler;
 public class Main {
 
 	public static void main(String[] args) {
-		int WStart = 2;
+		int WStart = 4;
 		int WEnd = 10;
 		int maxResourceCapacity = 1;
 		List<Criteria> criterias = new ArrayList<>();

@@ -260,7 +260,7 @@ public class Scheduler {
 		int shifted_st = st;
 		Integer[] res = resUtilizationMap.get(t.getResourceID());
 
-		for (int k = st - s.getWStart(); k < res.length - t.getProcessingTime(); k++) {
+		for (int k = Math.max(st - s.getWStart(),0); k < res.length - t.getProcessingTime(); k++) {
 			int a = res[k]; // resource utilization at task's start
 			int b = res[k + t.getProcessingTime()]; // resource utilization at
 													// task's end
