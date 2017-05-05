@@ -251,6 +251,7 @@ public class Scheduler {
 		OptionalInt maxPredecessorAccomplishmentDate = f.stream()
 				.mapToInt(x -> x.getStartingTime() + x.getTask().getProcessingTime()).max();
 
+		// Calculate the initial starting time
 		int st = t.getReleaseTime();
 		if (maxPredecessorAccomplishmentDate.isPresent()) {
 			st = maxPredecessorAccomplishmentDate.getAsInt();
@@ -260,11 +261,16 @@ public class Scheduler {
 		int shifted_st = st;
 		Integer[] res = resUtilizationMap.get(t.getResourceID());
 
-		for (int k = Math.max(st - s.getWStart(),0); k < res.length - t.getProcessingTime(); k++) {
-			int a = res[k]; // resource utilization at task's start
-			int b = res[k + t.getProcessingTime()]; // resource utilization at
-													// task's end
+		// Search a shift value k to add to the starting time
+		for (int k = Math.max(st - s.getWStart(), 0); k < res.length - t.getProcessingTime(); k++) {
+			// resource utilization at task's start
+			int a = res[k];
+			// resource utilization at task's end
+			int b = res[k + t.getProcessingTime()];
+			// Take the maximum between a and b
 			int resUse = Math.max(a, b);
+			// If the resource utilisation is minimum and the constraints are
+			// satisfied, keep k
 			if (resUse < resourceCapacity && resUse + 1 <= maxResourceCapacity
 					&& checkConstraints(t, k + s.getWStart(), s)) {
 				resourceCapacity = resUse;
