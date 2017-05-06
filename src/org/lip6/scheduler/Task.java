@@ -18,8 +18,6 @@ public interface Task {
 
 	int getProcessingTime();
 
-	//List<ImmutablePair<Integer, Integer>> getPredecessors();
-
 	List<Integer> getPredecessors();
 	
 	boolean hasPredecessor(int planID, int taskID);

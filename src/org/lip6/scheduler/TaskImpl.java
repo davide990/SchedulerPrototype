@@ -145,9 +145,13 @@ public class TaskImpl implements Executable, Cloneable, Task {
 		return true;
 	}
 
-	@Override
+	/*
+	 * @Override public String toString() { return "Task [taskID=" + taskID +
+	 * ", planID=" + planID + ", processingTime=" + processingTime + "]"; }
+	 */
+
 	public String toString() {
-		return "Task [taskID=" + taskID + ", planID=" + planID + ", processingTime=" + processingTime + "]";
+		return "(" + Integer.toString(planID) + "," + Integer.toString(taskID) + ")";
 	}
 
 	@Override
