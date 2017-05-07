@@ -1,17 +1,20 @@
 package org.lip6.scheduler.algorithm;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.lip6.scheduler.Task;
 
 public class Event {
 	private final int time;
-	private final int resourceID;
-	private int residualResourceCapacity;
 	private Set<Task> starting;
 	private Set<Task> terminating;
+
+	private Map<Integer, Integer> resourceCapacity;
 
 	public static Comparator<Event> getComparator() {
 		return new Comparator<Event>() {
@@ -22,41 +25,54 @@ public class Event {
 		};
 	}
 
-	private Event(int time, int resourceID) {
+	private Event(int time) {
 		this.time = time;
-		this.resourceID = resourceID;
-		residualResourceCapacity = 0;
 		starting = new HashSet<>();
 		terminating = new HashSet<>();
+		resourceCapacity = new HashMap<>();
 	}
 
-	public static Event get(int time, int resourceID) {
+	public static Event get(int time, int numResources) {
 		if (time < 0) {
 			throw new IllegalArgumentException("Time instant < 0");
 		}
 
-		return new Event(time, resourceID);
+		Event e = new Event(time);
+		for (int i = 1; i <= numResources; i++) {
+			e.resourceCapacity.put(i, 0);
+		}
+
+		return e;
 	}
 
 	public Set<Task> taskTerminatingHere() {
 		return terminating;
 	}
 
-	public int getResourceCapacity() {
-		return residualResourceCapacity;
+	public int getResourceCapacity(int resourceID) {
+		return resourceCapacity.getOrDefault(resourceID, 0);
+	}
+
+	public Map<Integer, Integer> resourceCapacity() {
+		return resourceCapacity;
+	}
+
+	public void increaseResourceUsage(int resourceID) {
+		resourceCapacity.put(resourceID, resourceCapacity.getOrDefault(resourceID, 0) + 1);
+	}
+
+	public void setResourceCapacities(Map<Integer, Integer> capacities){
+		resourceCapacity.clear();
+		resourceCapacity.putAll(capacities);
+	}
+	
+	public void setResourceCapacity(int resourceID, int value) {
+		resourceCapacity.put(resourceID, value);
 	}
 
 	public void removePlan(int planID) {
 		starting.removeIf(x -> x.getPlanID() == planID);
 		terminating.removeIf(x -> x.getPlanID() == planID);
-	}
-
-	public void increaseResourceUsage() {
-		this.residualResourceCapacity++;
-	}
-
-	public void setResourceCapacity(int value) {
-		this.residualResourceCapacity = value;
 	}
 
 	public void addToS(Task t) {
@@ -71,21 +87,17 @@ public class Event {
 		return time;
 	}
 
-	public int getResourceID() {
-		return resourceID;
-	}
-
 	@Override
 	public String toString() {
-		return "e" + Integer.toString(time) + " [resourceID=" + resourceID + ", b=" + residualResourceCapacity + ", S="
-				+ starting + ", C=" + terminating + "]";
+		return "e" + time + " [starting=" + starting + ", terminating=" + terminating + ", "
+				+ resourceCapacity.values().stream().map(x -> Integer.toString(x)).collect(Collectors.joining(","))
+				+ "]";
 	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + resourceID;
 		result = prime * result + time;
 		return result;
 	}
@@ -99,8 +111,6 @@ public class Event {
 		if (getClass() != obj.getClass())
 			return false;
 		Event other = (Event) obj;
-		if (resourceID != other.resourceID)
-			return false;
 		if (time != other.time)
 			return false;
 		return true;
