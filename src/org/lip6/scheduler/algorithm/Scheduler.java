@@ -19,17 +19,21 @@ import java.util.OptionalInt;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.Stack;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+
+
 import org.apache.commons.lang3.tuple.ImmutablePair;
+
 import org.lip6.scheduler.Plan;
 import org.lip6.scheduler.Schedule;
 import org.lip6.scheduler.Task;
 import org.lip6.scheduler.TaskSchedule;
 import org.lip6.scheduler.utils.CSVParser;
 import org.lip6.scheduler.utils.Utils;
+
+import com.google.common.base.Stopwatch;
 
 public class Scheduler {
 
@@ -54,8 +58,14 @@ public class Scheduler {
 		} catch (ParseException e) {
 			e.printStackTrace();
 		}
+		
+		
 		List<Plan> plans = new ArrayList<>(p.values());
+		Stopwatch timer = Stopwatch.createStarted();
 		Schedule s = buildSchedule(maxResourceCapacity, plans, criterias, WStart, WEnd);
+		timer = timer.stop();
+		System.out.println("Method took: " + timer);
+
 		return s;
 	}
 
@@ -203,14 +213,17 @@ public class Scheduler {
 				}
 
 				// if (t.getPlanID() == 1 && t.getTaskID() == 1) {
-				System.err.println("------------------TASK #" + t);
+				// System.err.println("------------------TASK #" + t);
 				// }
-				scheduleWithEvents(maxResourceCapacity, workingSolution, t, eventsMapForResource);
-
-				if (!tryScheduleTask(maxResourceCapacity, workingSolution, t, resUtilization)) {
+				if (!scheduleWithEvents(maxResourceCapacity, workingSolution, t, eventsMapForResource)) {
 					pk.setSchedulable(false);
 					break;
 				}
+
+				/*
+				 * if (!tryScheduleTask(maxResourceCapacity, workingSolution, t,
+				 * resUtilization)) { pk.setSchedulable(false); break; }
+				 */
 			}
 
 			if (hasTabuTask) {
@@ -240,36 +253,29 @@ public class Scheduler {
 			}
 		}
 
-		if (true) {
-			for (int i = 1; i <= numResources; i++) {
-				System.err.println("RESOURCE #" + Integer.toString(i));
-				System.err.println(
-						eventsMapForResource.get(i).stream().map(x -> x.toString()).collect(Collectors.joining("\n")));
-			}
-		}
+		/*
+		 * if (true) { for (int i = 1; i <= numResources; i++) {
+		 * System.err.println("RESOURCE #" + Integer.toString(i));
+		 * System.err.println( eventsMapForResource.get(i).stream().map(x ->
+		 * x.toString()).collect(Collectors.joining("\n"))); } }
+		 */
 
 		return lastFeasibleSolution;
 	}
 
-	// TODO deve ritornare un booleano -> false se t non può essere schedulato
-	// TODO Si deve passare in input la soluzione di lavoro in modo tale che un
-	// evento possa essere schedulato
-	private static void scheduleWithEvents(final int maxResourceCapacity, Schedule s, Task t,
+	private static boolean scheduleWithEvents(final int maxResourceCapacity, Schedule s, Task t,
 			Map<Integer, NavigableSet<Event>> eventsMap) {
 
-		int taskIDtoDebug = 2;
-		int planIDtoDebug = 2;
+		// int taskIDtoDebug = 2;
+		// int planIDtoDebug = 2;
 		NavigableSet<Event> events = eventsMap.get(t.getResourceID());
 
-		if (t.getTaskID() == taskIDtoDebug && t.getPlanID() == planIDtoDebug && true) {
-			System.err.println("");
-		}
+		/*
+		 * if (t.getTaskID() == taskIDtoDebug && t.getPlanID() == planIDtoDebug
+		 * && true) { System.err.println(""); }
+		 */
 
-		// evento iniziale
-		// TODO sk non viene calcolato in base agli eventuali predecessori.
-		// Infatti, tale controllo va fatto sulla lista degli eventi!
 		int sk = getInitialStartingTime(s.getWStart(), eventsMap, t);
-
 		Event e = getPreviousEvent(sk, t.getResourceID(), true, events).get();
 		boolean newStartEvent = false;
 		if (e.getTime() != sk) {
@@ -297,7 +303,7 @@ public class Scheduler {
 			lastEvent = getLastEvent(s.getWEnd(), events).get();
 		} catch (NoSuchElementException ex) {
 			System.err.println("Error: no final event found.");
-			return;
+			return false;
 		}
 
 		while (mi > 0 && !f.equals(lastEvent)) {
@@ -310,7 +316,6 @@ public class Scheduler {
 			// Do the capacity test
 			int capacityAte = f.getResourceCapacity() + 1;
 			int capacityAteNext = g.getResourceCapacity() + 1;
-
 			if (capacityAte <= maxResourceCapacity && capacityAteNext <= maxResourceCapacity
 					&& e.getTime() + t.getProcessingTime() <= s.getWEnd()) {
 				mi = Math.max(0, mi - g.getTime() + f.getTime());
@@ -322,6 +327,19 @@ public class Scheduler {
 				f = g;
 			}
 		}
+
+		if (!checkConstraints(t, e.getTime(), s)) {
+			for (NavigableSet<Event> set : eventsMap.values()) {
+				for (Event ev : set) {
+					ev.removePlan(t.getPlanID());
+				}
+			}
+
+			return false;
+		}
+
+		// Add to schedule
+		s.add(e.getTime(), t);
 
 		// Inserisci/aggiorna evento
 		e.addToS(t);
@@ -353,6 +371,7 @@ public class Scheduler {
 		if (newStartEvent) {
 			eventsMap.get(t.getResourceID()).add(e);
 		}
+		return true;
 	}
 
 	public static Optional<Event> getLastEventWhereTerminates(Task t, NavigableSet<Event> events) {

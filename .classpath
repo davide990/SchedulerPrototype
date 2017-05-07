@@ -5,5 +5,8 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="/home/davide/Téléchargements/commons-csv-1.4-bin/commons-csv-1.4/commons-csv-1.4.jar"/>
 	<classpathentry kind="lib" path="/home/davide/Téléchargements/commons-lang3-3.5-bin/commons-lang3-3.5/commons-lang3-3.5.jar"/>
+	<classpathentry kind="lib" path="/home/davide/Téléchargements/guava-testlib-21.0.jar"/>
+	<classpathentry kind="lib" path="/home/davide/Téléchargements/guava-gwt-21.0.jar"/>
+	<classpathentry kind="lib" path="/home/davide/Téléchargements/guava-21.0.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

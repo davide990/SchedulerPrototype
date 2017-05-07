@@ -4,7 +4,6 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.lip6.scheduler.Plan;
 import org.lip6.scheduler.Task;
 
 public class Event {
@@ -14,8 +13,7 @@ public class Event {
 	private Set<Task> starting;
 	private Set<Task> terminating;
 
-	public static Comparator<Event> getComparator()
-	{
+	public static Comparator<Event> getComparator() {
 		return new Comparator<Event>() {
 			@Override
 			public int compare(Event o1, Event o2) {
@@ -23,8 +21,7 @@ public class Event {
 			}
 		};
 	}
-	
-	
+
 	private Event(int time, int resourceID) {
 		this.time = time;
 		this.resourceID = resourceID;
@@ -47,6 +44,11 @@ public class Event {
 
 	public int getResourceCapacity() {
 		return residualResourceCapacity;
+	}
+
+	public void removePlan(int planID) {
+		starting.removeIf(x -> x.getPlanID() == planID);
+		terminating.removeIf(x -> x.getPlanID() == planID);
 	}
 
 	public void increaseResourceUsage() {
