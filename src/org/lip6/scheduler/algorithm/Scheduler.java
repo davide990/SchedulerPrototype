@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -99,26 +98,10 @@ public class Scheduler {
 		// Create the empty schedules
 		Schedule workingSolution = Schedule.get(numResources, wStart, wEnd);
 		Schedule lastFeasibleSolution = Schedule.get(numResources, wStart, wEnd);
-		// Create a map of array, where the key is the index of a resource, and
-		// the value is an array indicating the utilization of the resource
-		final int W = wEnd - wStart;
-		Map<Integer, Integer[]> resUtilization = new HashMap<>();
-		for (int i = 1; i <= numResources; i++) {
-			Integer[] ru = new Integer[W + 1];
-			Arrays.fill(ru, 0);
-			resUtilization.put(i, ru);
-		}
-
-		/*
-		 * Map<Integer, NavigableSet<Event>> eventsMapForResource = new
-		 * HashMap<>(); for (int i = 1; i <= numResources; i++) { TreeSet<Event>
-		 * events = new TreeSet<>(Event.getComparator());
-		 * events.add(Event.get(wStart, i)); events.add(Event.get(wEnd, i));
-		 * eventsMapForResource.put(i, events); }
-		 */
 		TreeSet<Event> events = new TreeSet<>(Event.getComparator());
-
+		// Add the event for Ws
 		events.add(Event.get(wStart, numResources));
+		// Add the event for We
 		events.add(Event.get(wEnd, numResources));
 
 		// Initialize the data structures
@@ -178,7 +161,7 @@ public class Scheduler {
 				} else {
 					// Precedence constraints are met here. Finally, the task
 					// can be scheduled
-					if (!tryScheduleTask(maxResourceCapacity, workingSolution, e.getTask(), resUtilization)) {
+					if (!scheduleWithEvents(maxResourceCapacity, workingSolution, e.getTask(), events)) {
 						// the task is not schedulable. Discard the plan.
 						List<TaskSchedule> toRemove = workingSolution.taskSchedules().stream()
 								.filter(x -> x.getTask().getPlanID() == e.getPlan().getID())
@@ -208,18 +191,10 @@ public class Scheduler {
 					continue;
 				}
 
-				// if (t.getPlanID() == 1 && t.getTaskID() == 1) {
-				// System.err.println("------------------TASK #" + t);
-				// }
 				if (!scheduleWithEvents(maxResourceCapacity, workingSolution, t, events)) {
 					pk.setSchedulable(false);
 					break;
 				}
-
-				/*
-				 * if (!tryScheduleTask(maxResourceCapacity, workingSolution, t,
-				 * resUtilization)) { pk.setSchedulable(false); break; }
-				 */
 			}
 
 			if (hasTabuTask) {
@@ -254,45 +229,31 @@ public class Scheduler {
 		return lastFeasibleSolution;
 	}
 
-	// TODO il task 3 non riempie il buco!
 	private static boolean scheduleWithEvents(final int maxResourceCapacity, Schedule s, Task t,
 			NavigableSet<Event> events) {
 		int sk = getInitialStartingTime(s.getWStart(), events, t);
-
 		// Start event!
-		Event e = getPreviousEvent(sk, t.getResourceID(), true, events).get();
+		Event e = EventUtils.getPreviousEvent(sk, t.getResourceID(), true, events).get();
 		Event f = e;
 		Event g = f;
 		int mi = t.getProcessingTime();
 		final Event lastEvent;
 		try {
-			lastEvent = getLastEvent(s.getWEnd(), events).get();
+			lastEvent = EventUtils.getLastEvent(s.getWEnd(), events).get();
 		} catch (NoSuchElementException ex) {
 			System.err.println("Error: no final event found.");
 			return false;
 		}
 
-		if (t.getTaskID() == 1 && t.getPlanID() == 3) {
-			System.err.println("");
-		}
-
 		while (mi > 0 && !f.equals(lastEvent)) {
-			if (getNextEvent(f, events).isPresent()) {
-				g = getNextEvent(f, events).get();
+			if (EventUtils.getNextEvent(f, events).isPresent()) {
+				g = EventUtils.getNextEvent(f, events).get();
 			} else {
 				g = lastEvent;
 			}
 
 			// Do the capacity test
 			int capacityAte = f.getResourceCapacity(t.getResourceID()) + 1;
-			int capacityAteNext = g.getResourceCapacity(t.getResourceID()) + 1;
-
-			System.err
-					.println("For " + t + " t(" + Integer.toString(e.getTime()) + "): " + Integer.toString(capacityAte)
-							+ " t(" + Integer.toString(g.getTime()) + "): " + Integer.toString(capacityAteNext));
-
-			// if (capacityAte <= maxResourceCapacity && capacityAteNext <=
-			// maxResourceCapacity) {
 			if (capacityAte <= maxResourceCapacity) {
 				mi = Math.max(0, mi - g.getTime() + f.getTime());
 				f = g;
@@ -306,7 +267,6 @@ public class Scheduler {
 
 		if (!checkConstraints(t, e.getTime(), s)) {
 			events.forEach(ev -> ev.removePlan(t.getPlanID()));
-			System.err.println("Task " + t + " not good for " + e);
 			return false;
 		}
 
@@ -316,91 +276,30 @@ public class Scheduler {
 		// Inserisci/aggiorna evento
 		e.addToS(t);
 		if (e.getTime() + t.getProcessingTime() == f.getTime()) {
-			// e.addToS(t);
 			f.addToC(t);
-
-			if (t.getTaskID() == 1 && t.getPlanID() == 3) {
-				System.err.println("CASO 1");
-			}
 		} else if (e.getTime() + t.getProcessingTime() > f.getTime()) {
 			Event newEvent = Event.get(e.getTime() + t.getProcessingTime(), s.resources());
 			newEvent.setResourceCapacities(f.resourceCapacity());
-
 			f.addToC(t);
 			events.add(newEvent);
 			f = newEvent;
-
-			if (t.getTaskID() == 1 && t.getPlanID() == 3) {
-				System.err.println("CASO 2");
-			}
 		} else {
-			Event predf = getPreviousEvent(f, events).get();
+			Event predf = EventUtils.getPreviousEvent(f, events).get();
 			Event newEvent = Event.get(e.getTime() + t.getProcessingTime(), s.resources());
-
 			newEvent.setResourceCapacities(predf.resourceCapacity());
-
-			// newEvent.setResourceCapacity(t.getResourceID(),
-			// predf.getResourceCapacity(t.getResourceID()));
 			newEvent.addToC(t);
-
 			events.add(newEvent);
 			f = newEvent;
-
-			if (t.getTaskID() == 1 && t.getPlanID() == 3) {
-				System.err.println("CASO 3");
-			}
 		}
 
 		// Aggiorna la risorsa
-		Event predf = getPreviousEvent(f, events).get();
+		Event predf = EventUtils.getPreviousEvent(f, events).get();
 		for (Event ev : events) {
 			if (ev.getTime() >= e.getTime() && ev.getTime() <= predf.getTime()) {
 				ev.increaseResourceUsage(t.getResourceID());
 			}
 		}
 		return true;
-	}
-
-	public static Optional<Event> getLastEventWhereTerminates(Task t, NavigableSet<Event> events) {
-
-		List<Event> vv = events.stream().filter(x -> x.taskTerminatingHere().contains(t)).collect(Collectors.toList());
-		OptionalInt max = vv.stream().mapToInt(x -> x.getTime()).max();
-
-		if (max.isPresent()) {
-			return events.stream().filter(x -> x.getTime() == max.getAsInt()).findFirst();
-		}
-
-		return Optional.empty();
-
-	}
-
-	public List<Event> executedAfter(int t, NavigableSet<Event> events) {
-		return events.stream().filter(x -> x.getTime() > t).collect(Collectors.toList());
-	}
-
-	private static Optional<Event> getLastEvent(int We, NavigableSet<Event> events) {
-		return events.stream().filter(x -> x.getTime() == We).findFirst();
-	}
-
-	private static Optional<Event> getNextEvent(Event v, NavigableSet<Event> events) {
-		try {
-			return Optional.of(events.tailSet(v, false).first());
-
-		} catch (NoSuchElementException ex) {
-			return Optional.empty();
-		}
-	}
-
-	private static Optional<Event> getPreviousEvent(int t, int resID, boolean inclusive, NavigableSet<Event> events) {
-		try {
-			return Optional.of(events.headSet(Event.get(t, resID), inclusive).last());
-		} catch (NoSuchElementException ex) {
-			return Optional.empty();
-		}
-	}
-
-	private static Optional<Event> getPreviousEvent(Event v, NavigableSet<Event> events) {
-		return Optional.of(events.headSet(v).last());
 	}
 
 	private static int getInitialStartingTime(int Ws, NavigableSet<Event> events, Task t) {
@@ -439,6 +338,7 @@ public class Scheduler {
 	 * @return <b>true</b> if <b>t</b> can be scheduled in <b>s</b>,
 	 *         <b>false</b> otherwise
 	 */
+	@SuppressWarnings("unused")
 	private static boolean tryScheduleTask(final int maxResourceCapacity, Schedule s, Task t,
 			Map<Integer, Integer[]> resUtilizationMap) {
 		// Take the scheduled predecessors of t (within the same plan)
