@@ -7,8 +7,12 @@ public interface Plan {
 	void addTask(Task t);
 
 	Collection<Task> tasks();
-	
+
 	List<Integer> successors();
+
+	void addSuccessor(int ID);
+
+	void removeSuccessor(int ID);
 
 	Task getTask(int taskID);
 

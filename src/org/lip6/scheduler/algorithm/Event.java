@@ -89,7 +89,7 @@ public class Event {
 
 	@Override
 	public String toString() {
-		return "e" + time + " [starting=" + starting + ", terminating=" + terminating + ", "
+		return "e" + time + " [S=" + starting + ", C=" + terminating + ", "
 				+ resourceCapacity.values().stream().map(x -> Integer.toString(x)).collect(Collectors.joining(","))
 				+ "]";
 	}

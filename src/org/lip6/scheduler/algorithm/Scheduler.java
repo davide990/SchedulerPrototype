@@ -6,7 +6,6 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -23,6 +22,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.lip6.graph.TopologicalSorting;
 import org.lip6.scheduler.Plan;
 import org.lip6.scheduler.Schedule;
 import org.lip6.scheduler.Task;
@@ -106,7 +106,7 @@ public class Scheduler {
 
 		// Initialize the data structures
 		Queue<TabuListEntry> tabuList = new LinkedList<>();
-		Queue<Plan> plansQueue = new PriorityQueue<>(PLAN_COMPARATOR);
+		// Queue<Plan> plansQueue = new PriorityQueue<>(PLAN_COMPARATOR);
 		Queue<Plan> scheduledPlans = new PriorityQueue<>(PLAN_COMPARATOR);
 		Queue<Plan> unscheduledPlans = new PriorityQueue<>(PLAN_COMPARATOR);
 
@@ -114,17 +114,14 @@ public class Scheduler {
 		int maxPriority = Collections.max(plans.stream().map(Plan::getPriority).collect(Collectors.toList()));
 		plans.forEach(p -> p.setInversePriority(maxPriority));
 
-		// Calculate the plans score
-		calculatePlanScore(plans, criterias);
+		// Sort the plans so that the precedences are respected
+		plans = sortPlans(plans);
 
-		// Once calculated the score, each plan is inserted in order to the
-		// priority queue
-		plans.forEach(p -> plansQueue.add(p));
-		plansQueue.forEach(p -> System.out
-				.println("plan added: " + Integer.toString(p.getID()) + ", score: " + Float.toString(p.getScore())));
+		System.err.println(
+				"sorted -> " + plans.stream().map(x -> Integer.toString(x.getID())).collect(Collectors.joining(",")));
 
 		// MAIN LOOP
-		while (!plansQueue.isEmpty() || !tabuList.isEmpty()) {
+		while (!plans.isEmpty() || !tabuList.isEmpty()) {
 			// STEP 1 ------------------------------------------------------
 			if (!tabuList.isEmpty()) {
 				// Extract a tabu task from the list
@@ -175,7 +172,8 @@ public class Scheduler {
 
 			// STEP 2 ------------------------------------------------------
 			// Get the highest scored plan from the sorted queue
-			Plan pk = plansQueue.poll();
+			Plan pk = plans.get(0);
+			plans.remove(0);
 			if (pk == null) {
 				continue;
 			}
@@ -223,17 +221,30 @@ public class Scheduler {
 				unscheduledPlans.add(pk);
 			}
 		}
-
 		events.forEach(x -> System.err.println(x));
-
 		return lastFeasibleSolution;
 	}
 
+	/**
+	 * Schedule the task t
+	 * 
+	 * @param maxResourceCapacity
+	 * @param s
+	 * @param t
+	 * @param events
+	 * @return
+	 */
 	private static boolean scheduleWithEvents(final int maxResourceCapacity, Schedule s, Task t,
 			NavigableSet<Event> events) {
 		int sk = getInitialStartingTime(s.getWStart(), events, t);
 		// Start event!
 		Event e = EventUtils.getPreviousEvent(sk, t.getResourceID(), true, events).get();
+
+		if (e.getTime() < sk && !events.contains(Event.get(sk, t.getResourceID()))) {
+			e = Event.get(sk, t.getResourceID());
+
+		}
+
 		Event f = e;
 		Event g = f;
 		int mi = t.getProcessingTime();
@@ -245,6 +256,10 @@ public class Scheduler {
 			return false;
 		}
 
+		if (t.getPlanID() == 4) {
+			System.err.println();
+		}
+
 		while (mi > 0 && !f.equals(lastEvent)) {
 			if (EventUtils.getNextEvent(f, events).isPresent()) {
 				g = EventUtils.getNextEvent(f, events).get();
@@ -254,11 +269,11 @@ public class Scheduler {
 
 			// Do the capacity test
 			int capacityAte = f.getResourceCapacity(t.getResourceID()) + 1;
-			if (capacityAte <= maxResourceCapacity) {
+			if (capacityAte <= maxResourceCapacity && checkConstraints(t, e.getTime(), s)) {
 				mi = Math.max(0, mi - g.getTime() + f.getTime());
 				f = g;
 			} else {
-				// start event e NOT FEASIBLE
+				// start event e is NOT FEASIBLE
 				mi = t.getProcessingTime();
 				e = g;
 				f = g;
@@ -273,7 +288,7 @@ public class Scheduler {
 		// Add to schedule
 		s.add(e.getTime(), t);
 
-		// Inserisci/aggiorna evento
+		// Add/Update event
 		e.addToS(t);
 		if (e.getTime() + t.getProcessingTime() == f.getTime()) {
 			f.addToC(t);
@@ -292,7 +307,7 @@ public class Scheduler {
 			f = newEvent;
 		}
 
-		// Aggiorna la risorsa
+		// update the resource usage
 		Event predf = EventUtils.getPreviousEvent(f, events).get();
 		for (Event ev : events) {
 			if (ev.getTime() >= e.getTime() && ev.getTime() <= predf.getTime()) {
@@ -302,7 +317,15 @@ public class Scheduler {
 		return true;
 	}
 
-	private static int getInitialStartingTime(int Ws, NavigableSet<Event> events, Task t) {
+	/**
+	 * Calculate the initial starting time sk for a task t
+	 * 
+	 * @param Ws
+	 * @param events
+	 * @param t
+	 * @return
+	 */
+	private static int getInitialStartingTime(int Ws, final NavigableSet<Event> events, Task t) {
 
 		int maxTime = t.getReleaseTime();
 		if (t.getTaskID() == 1 && t.getPlanID() == 3) {
@@ -310,6 +333,7 @@ public class Scheduler {
 		}
 
 		for (Event event : events) {
+			// search for the latest event that contains a predecessor of t
 			Optional<Task> pr = event.taskTerminatingHere().stream()
 					.filter(x -> x.getPlanID() == t.getPlanID() && t.getPredecessors().contains(x.getTaskID()))
 					.findFirst();
@@ -421,114 +445,26 @@ public class Scheduler {
 	}
 
 	/**
+	 * Calculate the topological sorting for the input set of plans. This ensure
+	 * that the precedences between the plans are respected. Also, the plans
+	 * with the same priority are then sorted according to user-defined criteria
 	 * 
 	 * @param plans
-	 */
-	private static Stack<ImmutablePair<Integer, Integer>> calculateTopologicalOrderScores(List<Plan> plans) {
-		// Find the root node, that is, the node which doesn't appair as
-		// successor of all the other nodes
-		Optional<Plan> root = Optional.empty();
-		for (Plan p : plans) {
-			if (plans.stream().filter(x -> x.successors().contains(p.getID())).count() == 0) {
-				root = Optional.of(p);
-				break;
-			}
-		}
-
-		// If such node is not found, throw an exception
-		if (!root.isPresent()) {
-			throw new IllegalArgumentException("Wrong plans precedences. No valid root node found.");
-		}
-		return topologicalSort(plans);
-		/*
-		 * Stack<ImmutablePair<Integer, Integer>> sortedPlans =
-		 * topologicalSort(plans); List<ImmutablePair<Integer, Integer>> scores
-		 * = new ArrayList<>(); while (!sortedPlans.empty()) {
-		 * scores.add(sortedPlans.pop()); } return scores;
-		 */
-	}
-
-	/**
-	 * Topological sorting of the plans. It returns a stack of pairs
-	 * <b>(A,B)</b> where <b>A</b> is the index of a plan, and <b>B</b> is the
-	 * index of the frontier the plan A belongs to.
-	 * 
-	 * @see Cormen Cormen et al.(2001), chapter 22.
-	 */
-	private static Stack<ImmutablePair<Integer, Integer>> topologicalSort(final List<Plan> plans) {
-		Stack<ImmutablePair<Integer, Integer>> stack = new Stack<>();
-
-		// Mark all the vertices as not visited
-		Map<Integer, Boolean> visitedPlans = new HashMap<>();
-		for (int i = 0; i < plans.size(); i++) {
-			visitedPlans.put(plans.get(i).getID(), false);
-		}
-
-		// Call the recursive helper function to store Topological Sort starting
-		// from all vertices one by one
-		int frontierStartIndex = 0;
-		for (int i = 0; i < plans.size(); i++) {
-			if (visitedPlans.get(plans.get(i).getID()) == false) {
-				topologicalSortUtil(plans.get(i), plans, visitedPlans, stack, frontierStartIndex);
-			}
-		}
-
-		return stack;
-	}
-
-	static void topologicalSortUtil(Plan plan, final List<Plan> plans, Map<Integer, Boolean> visited,
-			Stack<ImmutablePair<Integer, Integer>> stack, int frontierIndex) {
-		// Mark the current node as visited.
-		visited.put(plan.getID(), true);
-
-		frontierIndex++;
-
-		for (Integer successor : plan.successors()) {
-			if (!visited.get(successor)) {
-				Optional<Plan> s = plans.stream().filter(x -> x.getID() == successor).findFirst();
-				if (s.isPresent()) {
-					topologicalSortUtil(s.get(), plans, visited, stack, frontierIndex);
-				}
-			}
-		}
-
-		System.err.println("[TOPOLOGICAL SORTING] Pushing plan #" + Integer.toString(plan.getID()) + " with j: "
-				+ Integer.toString(frontierIndex));
-
-		// Push current vertex to stack which stores result
-		stack.push(new ImmutablePair<Integer, Integer>(plan.getID(), frontierIndex));
-	}
-
-	/**
-	 * Calculate the scores for the given plans, according to the input criteria
-	 * 
-	 * @param plans
-	 * @param criterias
 	 * @return
 	 */
-	private static List<Float> calculatePlanScore(List<Plan> plans, List<Criteria> criterias) {
-		Stack<ImmutablePair<Integer, Integer>> orderScore = calculateTopologicalOrderScores(plans);
+	private static List<Plan> sortPlans(final List<Plan> plans) {
+		List<Plan> sorted = new ArrayList<>(plans);
 
-		List<Float> scores = new ArrayList<>();
-		// Iterate each plan
-		for (Plan plan : plans) {
-			// Initialize the score at zero
-			float score = 0;
-			for (int i = 0; i < criterias.size(); i++) {
-				// Apply the criteria function, using the weight specified, to
-				// the current plan, and add the resulting value to the score
-				score += criterias.get(i).getCriteriaFunc().apply(plan) * criterias.get(i).getWeight();
+		Stack<ImmutablePair<Integer, Integer>> orderScore = TopologicalSorting.calculateTopologicalOrderScores(sorted);
+
+		Plan source = plans.stream().min(new Comparator<Plan>() {
+			@Override
+			public int compare(Plan o1, Plan o2) {
+				return Integer.compare(o1.getID(), o2.getID());
 			}
-			int toAdd = orderScore.stream().filter(x -> x.getLeft() == plan.getID()).mapToInt(x -> x.getRight()).sum();
-			score += toAdd;
+		}).get();
 
-			// Set the score for the current plan
-			plan.setScore(score);
-			scores.add(score);
-		}
-
-		return scores;
-
+		return TopologicalSorting.bellmanFord(source, sorted, orderScore);
 	}
 
 	/**

@@ -98,6 +98,19 @@ public class PlanImpl implements Plan, Executable {
 	}
 
 	@Override
+	public void removeSuccessor(int ID) {
+		if (successors.contains(ID)) {
+			successors.remove(successors.indexOf(ID));
+		}
+
+	}
+
+	@Override
+	public void addSuccessor(int ID) {
+		successors.add(ID);
+	}
+
+	@Override
 	public int getExecutionTime() {
 		return executionTime;
 	}
