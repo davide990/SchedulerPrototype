@@ -9,9 +9,11 @@ import java.io.Reader;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.commons.csv.CSVFormat;
@@ -65,7 +67,29 @@ public class CSVParser {
 			plans.get(planID).addTask(TaskFactory.getTask(taskID, planID, resourceID, releaseTime, dueDate,
 					processingTime, planPriority, taskPredecessors));
 		}
+		setTaskSuccessors(plans.values());
 		return plans;
+	}
+
+	/**
+	 * Set the successors for each task in the parsed plan set.
+	 * 
+	 * @param plans
+	 */
+	private static void setTaskSuccessors(Collection<Plan> plans) {
+		// Iterate each plan
+		for (Plan plan : plans) {
+			for (Task task : plan.tasks()) {
+				for (Integer predecessor : task.getPredecessors()) {
+					Optional<Task> t = plan.tasks().stream().filter(x -> x.getTaskID() == predecessor).findFirst();
+					if (!t.isPresent()) {
+						continue;
+					}
+					plan.tasks().stream().filter(x -> x.getTaskID() == predecessor).findFirst().get()
+							.addSuccessor(task.getTaskID());
+				}
+			}
+		}
 	}
 
 	/**

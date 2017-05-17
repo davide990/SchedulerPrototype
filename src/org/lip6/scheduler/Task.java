@@ -19,8 +19,14 @@ public interface Task {
 	int getProcessingTime();
 
 	List<Integer> getPredecessors();
-	
-	boolean hasPredecessor(int planID, int taskID);
+
+	boolean hasPredecessor(int taskID);
+
+	List<Integer> getSucessors();
+
+	boolean hasSuccessor(int taskID);
+
+	void addSuccessor(int taskID);
 
 	String toHTMLString();
 

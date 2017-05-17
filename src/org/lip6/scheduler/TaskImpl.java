@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.lang3.tuple.ImmutablePair;
-
 public class TaskImpl implements Executable, Cloneable, Task {
 
 	final int taskID;
@@ -15,12 +13,8 @@ public class TaskImpl implements Executable, Cloneable, Task {
 	final int dueDate;
 	final int processingTime;
 	final int planPriority;
-	/**
-	 * A map containing as key the ID of a plan and as value a list of tasks
-	 * which precedes this task.
-	 */
-	// final List<ImmutablePair<Integer, Integer>> predecessors;
 	final List<Integer> predecessors;
+	final List<Integer> successors;
 
 	TaskImpl(int taskID, int planID, int resourceID, int releaseTime, int dueDate, int processingTime, int planPriority,
 			List<Integer> predecessors) {
@@ -31,8 +25,8 @@ public class TaskImpl implements Executable, Cloneable, Task {
 		this.dueDate = dueDate;
 		this.processingTime = processingTime;
 		this.planPriority = planPriority;
-		// this.predecessors = new ArrayList<>(predecessors);
 		this.predecessors = new ArrayList<>(predecessors);
+		this.successors = new ArrayList<>(predecessors);
 	}
 
 	@Override
@@ -111,8 +105,25 @@ public class TaskImpl implements Executable, Cloneable, Task {
 	}
 
 	@Override
-	public boolean hasPredecessor(int planID, int taskID) {
-		return predecessors.contains(new ImmutablePair<>(planID, taskID));
+	public boolean hasPredecessor(int taskID) {
+		return predecessors.contains(taskID);
+	}
+
+	@Override
+	public List<Integer> getSucessors() {
+		return Collections.unmodifiableList(successors);
+	}
+
+	@Override
+	public boolean hasSuccessor(int taskID) {
+		return successors.contains(taskID);
+	}
+
+	@Override
+	public void addSuccessor(int taskID) {
+		if (!successors.contains(taskID)) {
+			successors.add(taskID);
+		}
 	}
 
 	@Override
@@ -149,9 +160,8 @@ public class TaskImpl implements Executable, Cloneable, Task {
 	 * @Override public String toString() { return "Task [taskID=" + taskID +
 	 * ", planID=" + planID + ", processingTime=" + processingTime + "]"; }
 	 */
-
 	public String toString() {
-		return "(" + Integer.toString(planID) + "," + Integer.toString(taskID) + ")";
+		return "(plan #" + Integer.toString(planID) + ", task #" + Integer.toString(taskID) + ")";
 	}
 
 	@Override
