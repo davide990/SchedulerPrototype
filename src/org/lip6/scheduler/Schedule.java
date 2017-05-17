@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 
 import org.lip6.scheduler.utils.Utils;
 
-public class Schedule implements Executable, Cloneable {
+public class Schedule implements Cloneable {
 
 	private final int numResources;
 	private final int WStart;
@@ -109,11 +109,11 @@ public class Schedule implements Executable, Cloneable {
 	public int getAccomplishmentTime(int planID, int taskID) {
 		// Find the corresponding task assignment
 		Optional<TaskSchedule> s = schedule.stream()
-				.filter(x -> x.getTask().getPlanID() == planID && x.getTask().getTaskID() == taskID).findFirst();
+				.filter(x -> ((Task) x.getTask()).getPlanID() == planID && x.getTask().getID() == taskID).findFirst();
 
 		// if the task has been scheduled, get its accomplishment time
 		if (s.isPresent()) {
-			return s.get().getStartingTime() + s.get().getTask().getProcessingTime();
+			return s.get().getStartingTime() + ((Task) s.get().getTask()).getProcessingTime();
 		}
 
 		// otherwise throw an exception
@@ -127,14 +127,21 @@ public class Schedule implements Executable, Cloneable {
 	 * @param startingTime
 	 * @param t
 	 */
-	public void add(int startingTime, Task t) {
-		Objects.requireNonNull(t, "Task cannot be null");
+	public void addTask(int startingTime, Task task) {
+		Objects.requireNonNull(task, "Task cannot be null");
+
+		if (!(task instanceof Task)) {
+			throw new IllegalArgumentException("Argument is not a task");
+		}
+
+		Task t = (Task) task;
+
 		if (startingTime <= 0) {
 			throw new IllegalArgumentException("Starting time can not be <= 0");
 		}
 
 		// Create a new task assignment for task t at starting time startingTime
-		TaskSchedule s = new TaskSchedule(t, startingTime, t.getResourceID());
+		TaskSchedule s = new TaskSchedule(task, startingTime, t.getResourceID());
 		schedule.add(s);
 
 		// Keep the ID of the plan which contains t
@@ -159,7 +166,7 @@ public class Schedule implements Executable, Cloneable {
 		// If a task has been already scheduled for a given resource
 		if (lastTaskForResource.containsKey(resource)) {
 			TaskSchedule s = lastTaskForResource.get(resource);
-			return s.getStartingTime() + s.getTask().getProcessingTime();
+			return s.getStartingTime() + ((Task) s.getTask()).getProcessingTime();
 		}
 
 		return WStart;
@@ -182,8 +189,8 @@ public class Schedule implements Executable, Cloneable {
 				lastTaskForResource.put(x.getResource(), x);
 			} else {
 				int lastAccomplishmentDate = lastTaskForResource.get(x.getResource()).getStartingTime()
-						+ lastTaskForResource.get(x.getResource()).getTask().getProcessingTime();
-				if (x.getStartingTime() + x.getTask().getProcessingTime() >= lastAccomplishmentDate) {
+						+ ((Task) lastTaskForResource.get(x.getResource()).getTask()).getProcessingTime();
+				if (x.getStartingTime() + ((Task) x.getTask()).getProcessingTime() >= lastAccomplishmentDate) {
 					lastTaskForResource.put(x.getResource(), x);
 				}
 			}
@@ -199,20 +206,11 @@ public class Schedule implements Executable, Cloneable {
 	}
 
 	@Override
-	public void execute(String[] args) {
-		logger.log(Level.FINEST, "Executing Schedule");
-		/*
-		 * schedule.forEach((k, v) -> { logger.log(Level.FINEST,
-		 * "Executing Plan [" + k + "]"); // v.execute(args); });
-		 */
-	}
-
-	@Override
 	public String toString() {
 		String s = "";
 		for (int plan : plans()) {
-			String tasks = schedule.stream().map(TaskSchedule::getTask).filter(x -> x.getPlanID() == plan)
-					.map(x -> Integer.toString(x.getTaskID())).collect(Collectors.joining(","));
+			String tasks = schedule.stream().map(TaskSchedule::getTask).filter(x -> ((Task) x).getPlanID() == plan)
+					.map(x -> Integer.toString(x.getID())).collect(Collectors.joining(","));
 			s = s.concat("Plan #" + plan + ": {" + tasks + "}\n");
 		}
 

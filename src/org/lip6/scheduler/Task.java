@@ -6,7 +6,7 @@ public interface Task {
 
 	int getResourceID();
 
-	int getTaskID();
+	int getID();
 
 	int getDueDate();
 
@@ -22,7 +22,7 @@ public interface Task {
 
 	boolean hasPredecessor(int taskID);
 
-	List<Integer> getSucessors();
+	List<Integer> getSuccessors();
 
 	boolean hasSuccessor(int taskID);
 
@@ -31,6 +31,6 @@ public interface Task {
 	String toHTMLString();
 
 	String toHTMLString(String textColor);
-
+	
 	Object clone() throws CloneNotSupportedException;
 }

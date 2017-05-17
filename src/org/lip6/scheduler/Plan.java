@@ -6,9 +6,9 @@ import java.util.List;
 public interface Plan {
 	void addTask(Task t);
 
-	Collection<Task> tasks();
+	Collection<Task> getTasks();
 
-	List<Integer> successors();
+	List<Integer> getSuccessors();
 
 	void addSuccessor(int ID);
 
@@ -32,7 +32,7 @@ public interface Plan {
 
 	int getNumberOfTasks();
 
-	void updateTask(Task t);
+	void updateTask(ExecutableNode t);
 
 	boolean isSchedulable();
 

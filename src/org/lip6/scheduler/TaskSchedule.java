@@ -6,6 +6,10 @@ public class TaskSchedule implements Cloneable {
 	private final int resource;
 
 	public TaskSchedule(Task task, int startingTime, int resource) {
+		if (!(task instanceof Task)) {
+			throw new IllegalArgumentException("Argument is not a task");
+		}
+
 		this.task = task;
 		this.startingTime = startingTime;
 		this.resource = resource;
@@ -13,7 +17,7 @@ public class TaskSchedule implements Cloneable {
 
 	@Override
 	protected Object clone() throws CloneNotSupportedException {
-		return new TaskSchedule((Task) task.clone(), startingTime, resource);
+		return new TaskSchedule((Task)task.clone(), startingTime, resource);
 	}
 
 	public Task getTask() {

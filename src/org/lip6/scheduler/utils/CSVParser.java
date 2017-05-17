@@ -79,14 +79,14 @@ public class CSVParser {
 	private static void setTaskSuccessors(Collection<Plan> plans) {
 		// Iterate each plan
 		for (Plan plan : plans) {
-			for (Task task : plan.tasks()) {
+			for (Task task : plan.getTasks()) {
 				for (Integer predecessor : task.getPredecessors()) {
-					Optional<Task> t = plan.tasks().stream().filter(x -> x.getTaskID() == predecessor).findFirst();
+					Optional<Task> t = plan.getTasks().stream().filter(x -> x.getID() == predecessor).findFirst();
 					if (!t.isPresent()) {
 						continue;
 					}
-					plan.tasks().stream().filter(x -> x.getTaskID() == predecessor).findFirst().get()
-							.addSuccessor(task.getTaskID());
+					plan.getTasks().stream().filter(x -> x.getID() == predecessor).findFirst().get()
+							.addSuccessor(task.getID());
 				}
 			}
 		}
@@ -114,8 +114,8 @@ public class CSVParser {
 		final CSVPrinter printer = CSVFormat.EXCEL.withHeader(csvHeaders.class).print(fout);
 
 		for (Plan p : plans) {
-			for (Task t : p.tasks()) {
-				printer.printRecord(t.getTaskID(), t.getPlanID(), p.getPriority(), t.getResourceID(),
+			for (Task t : p.getTasks()) {
+				printer.printRecord(t.getID(), t.getPlanID(), p.getPriority(), t.getResourceID(),
 						t.getReleaseTime(), t.getProcessingTime());
 			}
 

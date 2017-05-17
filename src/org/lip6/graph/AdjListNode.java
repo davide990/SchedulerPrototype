@@ -1,17 +1,18 @@
 package org.lip6.graph;
 
+import org.lip6.scheduler.ExecutableNode;
 import org.lip6.scheduler.Plan;
 
 public class AdjListNode {
-	private final Plan v;
+	private final ExecutableNode v;
 	private final int weight;
 
-	public AdjListNode(Plan _v, int _w) {
+	public AdjListNode(ExecutableNode _v, int _w) {
 		v = _v;
 		weight = _w;
 	}
 
-	public Plan getV() {
+	public ExecutableNode getV() {
 		return v;
 	}
 

@@ -6,11 +6,10 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-public class PlanImpl implements Plan, Executable {
+public class PlanImpl extends ExecutableNode implements Plan {
 
 	private final int ID;
 	private boolean schedulable;
@@ -56,7 +55,7 @@ public class PlanImpl implements Plan, Executable {
 	}
 
 	@Override
-	public List<Integer> successors() {
+	public List<Integer> getSuccessors() {
 		return Collections.unmodifiableList(successors);
 	}
 
@@ -121,9 +120,16 @@ public class PlanImpl implements Plan, Executable {
 	}
 
 	@Override
-	public void addTask(Task t) {
+	public void addTask(Task task) {
+
+		if (!(task instanceof Task)) {
+			throw new IllegalArgumentException("Argument is not a task");
+		}
+
+		Task t = (Task) task;
+
 		Objects.requireNonNull(t);
-		if (tasks.putIfAbsent(t.getTaskID(), t) != null) {
+		if (tasks.putIfAbsent(task.getID(), t) != null) {
 			throw new IllegalArgumentException("Task is already in plan");
 		}
 
@@ -147,12 +153,16 @@ public class PlanImpl implements Plan, Executable {
 	}
 
 	@Override
-	public void updateTask(Task t) {
-		tasks.replace(t.getTaskID(), t);
+	public void updateTask(ExecutableNode task) {
+		if (!(task instanceof Task)) {
+			throw new IllegalArgumentException("Argument is not a task");
+		}
+		Task t = (Task) task;
+		tasks.replace(task.getID(), t);
 	}
 
 	@Override
-	public Collection<Task> tasks() {
+	public Collection<Task> getTasks() {
 		return Collections.unmodifiableCollection(tasks.values());
 
 	}
@@ -168,21 +178,20 @@ public class PlanImpl implements Plan, Executable {
 	}
 
 	@Override
-	public void execute(String[] args) {
-		logger.log(Level.FINEST, "Executing plan [" + ID + "]");
-		tasks.forEach((k, v) -> {
-			logger.log(Level.FINEST, "Executing task [" + k + "]");
-
-			// TODO sistemare qui
-			// v.execute(args);
-
-		});
-	}
-
-	@Override
 	public String toString() {
 		return "Plan [ID=" + ID + ", tasks=[\n\t"
 				+ tasks.values().stream().map(Task::toString).collect(Collectors.joining("\n\t")) + "]";
+	}
+
+	@Override
+	public boolean hasSuccessor(int taskID) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public Object clone() {
+		throw new UnsupportedOperationException("Not supported");
 	}
 
 }

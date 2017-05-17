@@ -46,12 +46,7 @@ public class TaskFactory {
 		}
 
 		return new TaskImpl(taskID, planID, resourceID, releaseTime, dueDate, processingTime, planPriority,
-				predecessors) {
-			@Override
-			public void execute(String[] args) {
-				executionFunction.apply(args);
-			}
-		};
+				predecessors);
 
 	}
 }

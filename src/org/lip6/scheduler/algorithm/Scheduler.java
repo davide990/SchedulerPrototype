@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.lip6.graph.TopologicalSorting;
+import org.lip6.scheduler.ExecutableNode;
 import org.lip6.scheduler.Plan;
 import org.lip6.scheduler.Schedule;
 import org.lip6.scheduler.Task;
@@ -115,60 +116,47 @@ public class Scheduler {
 		plans.forEach(p -> p.setInversePriority(maxPriority));
 
 		// Sort the plans so that the precedences are respected
-		plans = sortPlans(plans);
+		List<ExecutableNode> pl = sortPlans(plans.stream().map(x -> (ExecutableNode) x).collect(Collectors.toList()));
+		plans = pl.stream().map(x -> (Plan) x).collect(Collectors.toList());
 
 		System.err.println(
 				"sorted -> " + plans.stream().map(x -> Integer.toString(x.getID())).collect(Collectors.joining(",")));
 
 		// MAIN LOOP
-		while (!plans.isEmpty() || !tabuList.isEmpty()) {
-			// STEP 1 ------------------------------------------------------
-			if (!tabuList.isEmpty()) {
-				// Extract a tabu task from the list
-				TabuListEntry e = tabuList.poll();
-				if (e.getWaitTurns() > 0) {
-					e.setWaitTurns(e.getWaitTurns() - 1);
-					tabuList.add(e);
-					continue;
-				}
-
-				// Here, a tabu list element has expired (turns=0). So, it can
-				// be checked again
-				System.err.println("Checking " + e);
-
-				// Check the precedence constraint
-				if (!checkPrecedences(workingSolution, e.getTask())) {
-					if (e.getNumTries() >= MAX_TABU_TRIES) {
-						// discard the plan, since the maximum number of tries
-						// for this plan has been reached
-						List<TaskSchedule> toRemove = workingSolution.taskSchedules().stream()
-								.filter(x -> x.getTask().getPlanID() == e.getPlan().getID())
-								.collect(Collectors.toList());
-						workingSolution.unSchedule(toRemove);
-						// Push pk into the queue of unscheduled plans
-						unscheduledPlans.add(e.getPlan());
-					} else {
-						// Re-insert in tabu list and increase the number of
-						// tries done
-						e.setWaitTurns(MAX_TABU_TURNS);
-						e.increaseNumTries();
-						tabuList.add(e);
-						System.err.println("Reinserting " + e);
-					}
-				} else {
-					// Precedence constraints are met here. Finally, the task
-					// can be scheduled
-					if (!scheduleWithEvents(maxResourceCapacity, workingSolution, e.getTask(), events)) {
-						// the task is not schedulable. Discard the plan.
-						List<TaskSchedule> toRemove = workingSolution.taskSchedules().stream()
-								.filter(x -> x.getTask().getPlanID() == e.getPlan().getID())
-								.collect(Collectors.toList());
-						workingSolution.unSchedule(toRemove);
-						// Push pk into the queue of unscheduled plans
-						unscheduledPlans.add(e.getPlan());
-					}
-				}
-			}
+		while (!plans.isEmpty() /* || !tabuList.isEmpty() */) {
+			/*
+			 * // STEP 1 ------------------------------------------------------
+			 * if (!tabuList.isEmpty()) { // Extract a tabu task from the list
+			 * TabuListEntry e = tabuList.poll(); if (e.getWaitTurns() > 0) {
+			 * e.setWaitTurns(e.getWaitTurns() - 1); tabuList.add(e); continue;
+			 * }
+			 * 
+			 * // Here, a tabu list element has expired (turns=0). So, it can //
+			 * be checked again System.err.println("Checking " + e);
+			 * 
+			 * // Check the precedence constraint if
+			 * (!checkPrecedences(workingSolution, e.getTask())) { if
+			 * (e.getNumTries() >= MAX_TABU_TRIES) { // discard the plan, since
+			 * the maximum number of tries // for this plan has been reached
+			 * List<TaskSchedule> toRemove =
+			 * workingSolution.taskSchedules().stream() .filter(x ->
+			 * ((Task)x.getTask()).getPlanID() == e.getPlan().getID())
+			 * .collect(Collectors.toList());
+			 * workingSolution.unSchedule(toRemove); // Push pk into the queue
+			 * of unscheduled plans unscheduledPlans.add(e.getPlan()); } else {
+			 * // Re-insert in tabu list and increase the number of // tries
+			 * done e.setWaitTurns(MAX_TABU_TURNS); e.increaseNumTries();
+			 * tabuList.add(e); System.err.println("Reinserting " + e); } } else
+			 * { // Precedence constraints are met here. Finally, the task //
+			 * can be scheduled if (!scheduleWithEvents(maxResourceCapacity,
+			 * workingSolution, e.getTask(), events)) { // the task is not
+			 * schedulable. Discard the plan. List<TaskSchedule> toRemove =
+			 * workingSolution.taskSchedules().stream() .filter(x ->
+			 * x.getTask().getPlanID() == e.getPlan().getID())
+			 * .collect(Collectors.toList());
+			 * workingSolution.unSchedule(toRemove); // Push pk into the queue
+			 * of unscheduled plans unscheduledPlans.add(e.getPlan()); } } }
+			 */
 
 			// STEP 2 ------------------------------------------------------
 			// Get the highest scored plan from the sorted queue
@@ -180,7 +168,7 @@ public class Scheduler {
 			boolean hasTabuTask = false;
 
 			// Loop each task t in the plan pk
-			for (Task t : pk.tasks()) {
+			for (Task t : pk.getTasks()) {
 				// Check precedence constraints
 				if (!checkPrecedences(workingSolution, t)) {
 					System.err.println("Adding " + t + " to tabu list");
@@ -215,7 +203,7 @@ public class Scheduler {
 				// pk is NOT schedulable: take all its tasks and remove them
 				// from the solution
 				List<TaskSchedule> toRemove = workingSolution.taskSchedules().stream()
-						.filter(x -> x.getTask().getPlanID() == pk.getID()).collect(Collectors.toList());
+						.filter(x -> ((Task) x.getTask()).getPlanID() == pk.getID()).collect(Collectors.toList());
 				workingSolution.unSchedule(toRemove);
 				// Push pk into the queue of unscheduled plans
 				unscheduledPlans.add(pk);
@@ -282,7 +270,7 @@ public class Scheduler {
 		}
 
 		// Add to schedule
-		s.add(e.getTime(), t);
+		s.addTask(e.getTime(), t);
 
 		// Add/Update event
 		e.addToS(t);
@@ -324,15 +312,14 @@ public class Scheduler {
 	private static int getInitialStartingTime(int Ws, final NavigableSet<Event> events, Task t) {
 
 		int maxTime = t.getReleaseTime();
-		if (t.getTaskID() == 1 && t.getPlanID() == 3) {
+		if (t.getID() == 1 && t.getPlanID() == 3) {
 			System.err.println("");
 		}
 
 		for (Event event : events) {
 			// search for the latest event that contains a predecessor of t
 			Optional<Task> pr = event.taskTerminatingHere().stream()
-					.filter(x -> x.getPlanID() == t.getPlanID() && t.getPredecessors().contains(x.getTaskID()))
-					.findFirst();
+					.filter(x -> x.getPlanID() == t.getPlanID() && t.getPredecessors().contains(x.getID())).findFirst();
 
 			if (pr.isPresent()) {
 				if (event.getTime() > maxTime) {
@@ -354,7 +341,7 @@ public class Scheduler {
 	private static int getNumberOfResources(final List<Plan> plans) {
 		Set<Integer> res = new HashSet<>();
 		for (Plan plan : plans) {
-			res.addAll(plan.tasks().stream().map(x -> x.getResourceID()).distinct().collect(Collectors.toList()));
+			res.addAll(plan.getTasks().stream().map(x -> x.getResourceID()).distinct().collect(Collectors.toList()));
 		}
 		return res.size();
 	}
@@ -367,14 +354,14 @@ public class Scheduler {
 	 * @param plans
 	 * @return
 	 */
-	private static List<Plan> sortPlans(final List<Plan> plans) {
-		List<Plan> sorted = new ArrayList<>(plans);
+	private static List<ExecutableNode> sortPlans(final List<ExecutableNode> plans) {
+		List<ExecutableNode> sorted = new ArrayList<>(plans);
 
 		Stack<ImmutablePair<Integer, Integer>> orderScore = TopologicalSorting.calculateTopologicalOrderScores(sorted);
 
-		Plan source = plans.stream().min(new Comparator<Plan>() {
+		ExecutableNode source = plans.stream().min(new Comparator<ExecutableNode>() {
 			@Override
-			public int compare(Plan o1, Plan o2) {
+			public int compare(ExecutableNode o1, ExecutableNode o2) {
 				return Integer.compare(o1.getID(), o2.getID());
 			}
 		}).get();
@@ -431,7 +418,7 @@ public class Scheduler {
 		// From the list of the actually scheduled task, take those who are
 		// predecessors of the task t
 		List<Integer> scheduledPredecessors = s.taskSchedules().stream()
-				.filter(x -> x.getTask().getPlanID() == t.getPlanID()).map(x -> x.getTask().getTaskID())
+				.filter(x -> x.getTask().getPlanID() == t.getPlanID()).map(x -> x.getTask().getID())
 				.collect(Collectors.toList());
 
 		// Precedeces between tasks of the SAME plan

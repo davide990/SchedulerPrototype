@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class TaskImpl implements Executable, Cloneable, Task {
+public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 
 	final int taskID;
 	final int planID;
@@ -35,10 +35,6 @@ public class TaskImpl implements Executable, Cloneable, Task {
 				predecessors);
 	}
 
-	@Override
-	public void execute(String[] args) {
-	}
-
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -55,7 +51,7 @@ public class TaskImpl implements Executable, Cloneable, Task {
 	 * @see org.lip6.scheduler.Task#getTaskID()
 	 */
 	@Override
-	public int getTaskID() {
+	public int getID() {
 		return taskID;
 	}
 
@@ -110,7 +106,7 @@ public class TaskImpl implements Executable, Cloneable, Task {
 	}
 
 	@Override
-	public List<Integer> getSucessors() {
+	public List<Integer> getSuccessors() {
 		return Collections.unmodifiableList(successors);
 	}
 
@@ -167,14 +163,14 @@ public class TaskImpl implements Executable, Cloneable, Task {
 	@Override
 	public String toHTMLString() {
 		return "<html><body><center><p>J<sup>" + getPlanID() + "</sup><sub style='position: relative; left: -.5em;'>"
-				+ getTaskID() + "</sub></p></center></body></html>";
+				+ getID() + "</sub></p></center></body></html>";
 
 	}
 
 	@Override
 	public String toHTMLString(String textColor) {
 		return "<html><body><center><p style='color:" + textColor + ";'>J<sup>" + getPlanID()
-				+ "</sup><sub style='position: relative; left: -.5em;'>" + getTaskID()
+				+ "</sup><sub style='position: relative; left: -.5em;'>" + getID()
 				+ "</sub></p></center></body></html>";
 
 	}
