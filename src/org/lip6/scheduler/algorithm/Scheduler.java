@@ -6,6 +6,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -105,9 +106,6 @@ public class Scheduler {
 		// Add the event for We
 		events.add(Event.get(wEnd, numResources));
 
-		// Initialize the data structures
-		Queue<TabuListEntry> tabuList = new LinkedList<>();
-		// Queue<Plan> plansQueue = new PriorityQueue<>(PLAN_COMPARATOR);
 		Queue<Plan> scheduledPlans = new PriorityQueue<>(PLAN_COMPARATOR);
 		Queue<Plan> unscheduledPlans = new PriorityQueue<>(PLAN_COMPARATOR);
 
@@ -116,101 +114,115 @@ public class Scheduler {
 		plans.forEach(p -> p.setInversePriority(maxPriority));
 
 		// Sort the plans so that the precedences are respected
-		List<ExecutableNode> pl = sortPlans(plans.stream().map(x -> (ExecutableNode) x).collect(Collectors.toList()));
-		plans = pl.stream().map(x -> (Plan) x).collect(Collectors.toList());
+		// List<ExecutableNode> pl = sortPlans(plans.stream().map(x ->
+		// (ExecutableNode) x).collect(Collectors.toList()));
+		// plans = pl.stream().map(x -> (Plan) x).collect(Collectors.toList());
+
+		sortByPriorities(plans);
+
+		// key -> priorità, value -> numero di piani che hanno tale priorità
+		Map<Integer, Integer> prioritiesCountMap = new HashMap<>();
+
+		plans.forEach(x -> {
+			if (!prioritiesCountMap.containsKey(x.getPriority())) {
+				prioritiesCountMap.put(x.getPriority(), 1);
+			} else {
+				prioritiesCountMap.put(x.getPriority(), prioritiesCountMap.get(x.getPriority() + 1));
+			}
+		});
 
 		System.err.println(
 				"sorted -> " + plans.stream().map(x -> Integer.toString(x.getID())).collect(Collectors.joining(",")));
 
 		// MAIN LOOP
-		while (!plans.isEmpty() /* || !tabuList.isEmpty() */) {
-			/*
-			 * // STEP 1 ------------------------------------------------------
-			 * if (!tabuList.isEmpty()) { // Extract a tabu task from the list
-			 * TabuListEntry e = tabuList.poll(); if (e.getWaitTurns() > 0) {
-			 * e.setWaitTurns(e.getWaitTurns() - 1); tabuList.add(e); continue;
-			 * }
-			 * 
-			 * // Here, a tabu list element has expired (turns=0). So, it can //
-			 * be checked again System.err.println("Checking " + e);
-			 * 
-			 * // Check the precedence constraint if
-			 * (!checkPrecedences(workingSolution, e.getTask())) { if
-			 * (e.getNumTries() >= MAX_TABU_TRIES) { // discard the plan, since
-			 * the maximum number of tries // for this plan has been reached
-			 * List<TaskSchedule> toRemove =
-			 * workingSolution.taskSchedules().stream() .filter(x ->
-			 * ((Task)x.getTask()).getPlanID() == e.getPlan().getID())
-			 * .collect(Collectors.toList());
-			 * workingSolution.unSchedule(toRemove); // Push pk into the queue
-			 * of unscheduled plans unscheduledPlans.add(e.getPlan()); } else {
-			 * // Re-insert in tabu list and increase the number of // tries
-			 * done e.setWaitTurns(MAX_TABU_TURNS); e.increaseNumTries();
-			 * tabuList.add(e); System.err.println("Reinserting " + e); } } else
-			 * { // Precedence constraints are met here. Finally, the task //
-			 * can be scheduled if (!scheduleWithEvents(maxResourceCapacity,
-			 * workingSolution, e.getTask(), events)) { // the task is not
-			 * schedulable. Discard the plan. List<TaskSchedule> toRemove =
-			 * workingSolution.taskSchedules().stream() .filter(x ->
-			 * x.getTask().getPlanID() == e.getPlan().getID())
-			 * .collect(Collectors.toList());
-			 * workingSolution.unSchedule(toRemove); // Push pk into the queue
-			 * of unscheduled plans unscheduledPlans.add(e.getPlan()); } } }
-			 */
-
-			// STEP 2 ------------------------------------------------------
-			// Get the highest scored plan from the sorted queue
+		while (!plans.isEmpty()) {
+			// Get the plan with the highest priority
 			Plan pk = plans.get(0);
 			plans.remove(0);
 			if (pk == null) {
 				continue;
 			}
-			boolean hasTabuTask = false;
 
-			// Loop each task t in the plan pk
-			for (Task t : pk.getTasks()) {
-				// Check precedence constraints
-				if (!checkPrecedences(workingSolution, t)) {
-					System.err.println("Adding " + t + " to tabu list");
-					tabuList.add(new TabuListEntry(t, pk, MAX_TABU_TURNS));
-					hasTabuTask = true;
-					continue;
-				}
+			if (prioritiesCountMap.get(pk.getPriority()) == 1) {
+				System.err.println("Priority 1 for plan #" + Integer.toString(pk.getID()));
+				boolean scheduled = SchedulePlan(pk, workingSolution, events, maxResourceCapacity);
 
-				if (!scheduleWithEvents(maxResourceCapacity, workingSolution, t, events)) {
-					pk.setSchedulable(false);
-					break;
+				if (scheduled) {
+					scheduledPlans.add(pk);
+					try {
+						lastFeasibleSolution = (Schedule) workingSolution.clone();
+					} catch (CloneNotSupportedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				} else {
+					unscheduledPlans.add(pk);
 				}
+			} else {
+				List<Plan> toSchedule = new ArrayList<>();
+				toSchedule.add(pk);
+				toSchedule.addAll(
+						plans.stream().filter(x -> x.getPriority() == pk.getPriority()).collect(Collectors.toList()));
+
+				// Handle here the plans that have the same priority
+				SchedulePlansWithSamePriority(toSchedule, workingSolution, events, maxResourceCapacity);
+				
+				//...
 			}
 
-			if (hasTabuTask) {
-				// Here the plan can not be checked if it's schedulable or not,
-				// since it has one or more task pending in the tabu list. In
-				// this case, the algorithm proceeds.
+		}
+
+		events.forEach(x -> System.err.println(x));
+		return lastFeasibleSolution;
+	}
+
+	private static boolean SchedulePlansWithSamePriority(List<Plan> plans, Schedule workingSolution,
+			TreeSet<Event> events, int maxResourceCapacity) {
+
+		// TODO to implement
+		return true;
+	}
+
+	/**
+	 * Schedule the plan given as input into the
+	 * 
+	 * @param pk
+	 * @param workingSolution
+	 * @param lastFeasibleSolution
+	 * @param events
+	 * @param maxResourceCapacity
+	 */
+	private static boolean SchedulePlan(Plan pk, Schedule workingSolution, TreeSet<Event> events,
+			int maxResourceCapacity) {
+
+		// Loop each task t in the plan pk
+		for (Task t : pk.getTasks()) {
+			// Check precedence constraints
+			if (!checkPrecedences(workingSolution, t)) {
+				pk.setSchedulable(false);
 				continue;
 			}
 
-			// At this point, each task of pk has been scheduled
-			if (pk.isSchedulable()) {
-				try {
-					lastFeasibleSolution = (Schedule) workingSolution.clone();
-				} catch (CloneNotSupportedException e) {
-					e.printStackTrace();
-				}
-				// Push pk into the queue of scheduled plans
-				scheduledPlans.add(pk);
-			} else {
-				// pk is NOT schedulable: take all its tasks and remove them
-				// from the solution
-				List<TaskSchedule> toRemove = workingSolution.taskSchedules().stream()
-						.filter(x -> ((Task) x.getTask()).getPlanID() == pk.getID()).collect(Collectors.toList());
-				workingSolution.unSchedule(toRemove);
-				// Push pk into the queue of unscheduled plans
-				unscheduledPlans.add(pk);
+			if (!scheduleWithEvents(maxResourceCapacity, workingSolution, t, events)) {
+				pk.setSchedulable(false);
+				break;
 			}
 		}
-		events.forEach(x -> System.err.println(x));
-		return lastFeasibleSolution;
+		// At this point, each task of pk has been scheduled
+		if (pk.isSchedulable()) {
+			/*
+			 * try { lastFeasibleSolution = (Schedule) workingSolution.clone();
+			 * } catch (CloneNotSupportedException e) { e.printStackTrace(); }
+			 */
+			return true;
+		} else {
+			// pk is NOT schedulable: take all its tasks and remove them
+			// from the solution
+			List<TaskSchedule> toRemove = workingSolution.taskSchedules().stream()
+					.filter(x -> ((Task) x.getTask()).getPlanID() == pk.getID()).collect(Collectors.toList());
+			workingSolution.unSchedule(toRemove);
+			return false;
+		}
 	}
 
 	/**
@@ -367,6 +379,16 @@ public class Scheduler {
 		}).get();
 
 		return TopologicalSorting.bellmanFord(source, sorted, orderScore);
+	}
+
+	private static void sortByPriorities(List<Plan> plans) {
+
+		// TODO la modifica effettivamente?
+		plans.stream().sorted(new Comparator<Plan>() {
+			public int compare(Plan o1, Plan o2) {
+				return -Integer.compare(o1.getPriority(), o2.getPriority());
+			};
+		});
 	}
 
 	/**
