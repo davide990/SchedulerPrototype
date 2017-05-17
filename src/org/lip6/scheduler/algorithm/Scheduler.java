@@ -256,10 +256,6 @@ public class Scheduler {
 			return false;
 		}
 
-		if (t.getPlanID() == 4) {
-			System.err.println();
-		}
-
 		while (mi > 0 && !f.equals(lastEvent)) {
 			if (EventUtils.getNextEvent(f, events).isPresent()) {
 				g = EventUtils.getNextEvent(f, events).get();
