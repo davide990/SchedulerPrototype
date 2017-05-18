@@ -45,6 +45,10 @@ public class Event {
 		return e;
 	}
 
+	public Set<Task> taskStartingHere() {
+		return starting;
+	}
+
 	public Set<Task> taskTerminatingHere() {
 		return terminating;
 	}
@@ -61,11 +65,11 @@ public class Event {
 		resourceCapacity.put(resourceID, resourceCapacity.getOrDefault(resourceID, 0) + 1);
 	}
 
-	public void setResourceCapacities(Map<Integer, Integer> capacities){
+	public void setResourceCapacities(Map<Integer, Integer> capacities) {
 		resourceCapacity.clear();
 		resourceCapacity.putAll(capacities);
 	}
-	
+
 	public void setResourceCapacity(int resourceID, int value) {
 		resourceCapacity.put(resourceID, value);
 	}

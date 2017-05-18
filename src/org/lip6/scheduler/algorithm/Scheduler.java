@@ -166,9 +166,21 @@ public class Scheduler {
 				plans.removeAll(toSchedule);
 
 				// Handle here the plans that have the same priority
-				SchedulePlansWithSamePriority(toSchedule, workingSolution, events, maxResourceCapacity);
+				List<Plan> unscheduled = SchedulePlansWithSamePriority(toSchedule, workingSolution, events,
+						maxResourceCapacity);
 
-				// ...
+				for (Plan p : unscheduled) {
+					List<TaskSchedule> toRemove = workingSolution.taskSchedules().stream()
+							.filter(x -> ((Task) x.getTask()).getPlanID() == p.getID()).collect(Collectors.toList());
+					workingSolution.unSchedule(toRemove);
+				}
+				
+				try {
+					lastFeasibleSolution = (Schedule) workingSolution.clone();
+				} catch (CloneNotSupportedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 
 		}
@@ -184,9 +196,9 @@ public class Scheduler {
 	 * @param workingSolution
 	 * @param events
 	 * @param maxResourceCapacity
-	 * @return
+	 * @return the list of <b>unscheduled</b> plans
 	 */
-	private static boolean SchedulePlansWithSamePriority(List<Plan> plans, Schedule workingSolution,
+	private static List<Plan> SchedulePlansWithSamePriority(List<Plan> plans, Schedule workingSolution,
 			TreeSet<Event> events, int maxResourceCapacity) {
 
 		Map<Plan, TreeSet<Event>> validPlans = new HashMap<>();
@@ -203,23 +215,125 @@ public class Scheduler {
 			} catch (CloneNotSupportedException e) {
 				e.printStackTrace();
 			}
+			// Try to schedule the plan p
 			boolean scheduled = SchedulePlan(p, S, E, maxResourceCapacity);
 
 			if (scheduled) {
+				// Keep the plan p as it generates itself a solution
 				validPlans.put(p, E);
-
-				// Keep the topologically sorted set of tasks for the plan p
+				// Get the tasks of p
 				Collection<ExecutableNode> tasks = p.getTasks().stream().map(x -> (ExecutableNode) x)
 						.collect(Collectors.toList());
+
+				// Sort the tasks in a topological order
 				List<Integer> sortedTasks = TopologicalSorting.calculateTopologicalOrderScores(tasks).stream()
 						.map(x -> x.left).collect(Collectors.toList());
+				// Reverse the list of sorted tasks
+				Collections.reverse(sortedTasks);
+				// Keep the list of topologically sorted tasks
 				tasksSorted.put(p, sortedTasks);
+
+				System.err.println("Sorted tasks of plan #" + Integer.toString(p.getID()) + "->"
+						+ sortedTasks.stream().map(x -> Integer.toString(x)).collect(Collectors.joining(",")));
 			}
 		}
 
-		// Now assemble the final solution...
+		Map<Integer, List<Task>> sortedByResource = new HashMap<>();
 
-		return true;
+		for (Plan plan : tasksSorted.keySet()) {
+			// And each task in topological order
+			for (Integer taskID : tasksSorted.get(plan)) {
+				Task task = plan.getTask(taskID);
+				if (sortedByResource.containsKey(task.getResourceID())) {
+					sortedByResource.get(task.getResourceID()).add(task);
+				} else {
+					List<Task> l = new ArrayList<>();
+					l.add(task);
+					sortedByResource.put(task.getResourceID(), l);
+				}
+			}
+		}
+		List<Task> unscheduledTasks = new ArrayList<>();
+		List<Integer> unscheduledPlans = new ArrayList<>();
+		for (Integer resourceID : sortedByResource.keySet()) {
+			int minorResidualTime = Integer.MAX_VALUE;
+			Optional<Task> bestTask = Optional.empty();
+
+			while (!sortedByResource.get(resourceID).isEmpty()) {
+				unscheduledTasks.clear();
+				for (Task t : sortedByResource.get(resourceID)) {
+					Schedule S = null;
+					TreeSet<Event> E = null;
+					try {
+						S = (Schedule) workingSolution.clone();
+						E = (TreeSet<Event>) events.clone();
+					} catch (CloneNotSupportedException e) {
+						e.printStackTrace();
+					}
+					System.err.println("Scheduling task #"+t);
+					boolean success = scheduleTask(maxResourceCapacity, S, t, E);
+
+					if (!success) {
+						unscheduledTasks.add(t);
+						if (!unscheduledPlans.contains(t.getPlanID())) {
+							unscheduledPlans.add(t.getPlanID());
+						}
+						continue;
+					}
+
+					int td = getTimeDifferenceBetween(t, events);
+					//System.err.println("Residual time for " + t + ": " + Integer.toString(td));
+					if (td < minorResidualTime) {
+						minorResidualTime = td;
+						bestTask = Optional.of(t);
+					}
+				}
+
+				sortedByResource.get(resourceID).removeAll(unscheduledTasks);
+				unscheduledTasks.clear();
+
+				if (bestTask.isPresent()) {
+					System.err.println("For res #" + Integer.toString(resourceID) + " best task is " + bestTask.get());
+					scheduleTask(maxResourceCapacity, workingSolution, bestTask.get(), events);
+					sortedByResource.get(resourceID).remove(bestTask.get());
+				}
+
+			}
+		}
+
+		return plans.stream().filter(x -> unscheduledPlans.contains(x.getID())).collect(Collectors.toList());
+	}
+
+	/**
+	 * Calcola lo spazio morto tra l'evento in cui t è stato allocato e il suo
+	 * immediato predecessore
+	 * 
+	 * @param t
+	 * @param events
+	 * @return
+	 */
+	private static Integer getTimeDifferenceBetween(Task t, TreeSet<Event> events) {
+		Optional<Event> e = events.stream().filter(x -> x.taskStartingHere().contains(t)).findFirst();
+
+		if (e.isPresent()) {
+			Optional<Event> previousEvent = EventUtils.getPreviousEvent(e.get(), events);
+
+			// Se vi è un evento precedente a quello in cui il task è stato
+			// allocato
+			if (previousEvent.isPresent()) {
+				// Prendi l'accomplishment date dell'ultimo task allocato nella
+				// stessa risorsa nell'evento trovato (se presente)
+				Optional<Task> l = previousEvent.get().taskStartingHere().stream()
+						.filter(x -> x.getResourceID() == t.getResourceID()).findFirst();
+
+				if (l.isPresent()) {
+					return e.get().getTime() - previousEvent.get().getTime();
+				}
+
+			}
+		}
+
+		return -1;
 	}
 
 	/**
@@ -239,7 +353,7 @@ public class Scheduler {
 			// Check precedence constraints
 			if (!checkPrecedences(workingSolution, t)) {
 				pk.setSchedulable(false);
-				continue;
+				break; // TODO maybe break is more appropriate?
 			}
 
 			if (!scheduleTask(maxResourceCapacity, workingSolution, t, events)) {
@@ -249,10 +363,6 @@ public class Scheduler {
 		}
 		// At this point, each task of pk has been scheduled
 		if (pk.isSchedulable()) {
-			/*
-			 * try { lastFeasibleSolution = (Schedule) workingSolution.clone();
-			 * } catch (CloneNotSupportedException e) { e.printStackTrace(); }
-			 */
 			return true;
 		} else {
 			// pk is NOT schedulable: take all its tasks and remove them

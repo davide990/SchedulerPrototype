@@ -22,7 +22,8 @@ public class TopologicalSorting {
 	 * 
 	 * @param plans
 	 */
-	public static Stack<ImmutablePair<Integer, Integer>> calculateTopologicalOrderScores(Collection<ExecutableNode> plans) {
+	public static Stack<ImmutablePair<Integer, Integer>> calculateTopologicalOrderScores(
+			Collection<ExecutableNode> plans) {
 		// Find the root node, that is, the node which doesn't appair as
 		// successor of all the other nodes
 		Optional<ExecutableNode> root = Optional.empty();

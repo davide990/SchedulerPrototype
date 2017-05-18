@@ -6,7 +6,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class PlanImpl extends ExecutableNode implements Plan {
@@ -23,7 +22,8 @@ public class PlanImpl extends ExecutableNode implements Plan {
 	final LinkedHashMap<Integer, Task> tasks = new LinkedHashMap<>();
 	final List<Integer> successors;
 
-	private final static Logger logger = Logger.getLogger(PlanImpl.class.getName());
+	// private final static Logger logger =
+	// Logger.getLogger(PlanImpl.class.getName());
 
 	private PlanImpl(int ID, int priority) {
 		this.planScore = -1;
@@ -151,15 +151,12 @@ public class PlanImpl extends ExecutableNode implements Plan {
 	public Task getTask(int taskID) {
 		return tasks.getOrDefault(taskID, null);
 	}
-
-	@Override
-	public void updateTask(ExecutableNode task) {
-		if (!(task instanceof Task)) {
-			throw new IllegalArgumentException("Argument is not a task");
-		}
-		Task t = (Task) task;
-		tasks.replace(task.getID(), t);
-	}
+	/*
+	 * @Override public void updateTask(ExecutableNode task) { if (!(task
+	 * instanceof Task)) { throw new
+	 * IllegalArgumentException("Argument is not a task"); } Task t = (Task)
+	 * task; tasks.replace(task.getID(), t); }
+	 */
 
 	@Override
 	public Collection<Task> getTasks() {

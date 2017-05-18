@@ -48,7 +48,11 @@ public class EventUtils {
 	}
 
 	public static Optional<Event> getPreviousEvent(Event v, NavigableSet<Event> events) {
-		return Optional.of(events.headSet(v).last());
+		try {
+			return Optional.of(events.headSet(v).last());
+		} catch (NoSuchElementException ex) {
+			return Optional.empty();
+		}
 	}
 
 }
