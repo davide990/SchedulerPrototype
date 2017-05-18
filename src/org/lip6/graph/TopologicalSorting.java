@@ -1,6 +1,7 @@
 package org.lip6.graph;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -21,7 +22,7 @@ public class TopologicalSorting {
 	 * 
 	 * @param plans
 	 */
-	public static Stack<ImmutablePair<Integer, Integer>> calculateTopologicalOrderScores(List<ExecutableNode> plans) {
+	public static Stack<ImmutablePair<Integer, Integer>> calculateTopologicalOrderScores(Collection<ExecutableNode> plans) {
 		// Find the root node, that is, the node which doesn't appair as
 		// successor of all the other nodes
 		Optional<ExecutableNode> root = Optional.empty();
@@ -36,7 +37,7 @@ public class TopologicalSorting {
 		if (!root.isPresent()) {
 			throw new IllegalArgumentException("Wrong plans precedences. No valid root node found.");
 		}
-		return topologicalSort(plans);
+		return topologicalSort(new ArrayList<>(plans));
 	}
 
 	/**

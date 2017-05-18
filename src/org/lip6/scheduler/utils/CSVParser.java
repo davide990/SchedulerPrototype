@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
+import org.lip6.scheduler.ExecutableNode;
 import org.lip6.scheduler.Plan;
 import org.lip6.scheduler.PlanImpl;
 import org.lip6.scheduler.Task;
@@ -67,6 +68,7 @@ public class CSVParser {
 			plans.get(planID).addTask(TaskFactory.getTask(taskID, planID, resourceID, releaseTime, dueDate,
 					processingTime, planPriority, taskPredecessors));
 		}
+
 		setTaskSuccessors(plans.values());
 		return plans;
 	}
@@ -80,14 +82,9 @@ public class CSVParser {
 		// Iterate each plan
 		for (Plan plan : plans) {
 			for (Task task : plan.getTasks()) {
-				for (Integer predecessor : task.getPredecessors()) {
-					Optional<Task> t = plan.getTasks().stream().filter(x -> x.getID() == predecessor).findFirst();
-					if (!t.isPresent()) {
-						continue;
-					}
-					plan.getTasks().stream().filter(x -> x.getID() == predecessor).findFirst().get()
-							.addSuccessor(task.getID());
-				}
+				List<Task> t = plan.getTasks().stream().filter(x -> x.getPredecessors().contains(task.getID()))
+						.collect(Collectors.toList());
+				t.forEach(tt -> task.addSuccessor(tt.getID()));
 			}
 		}
 	}
@@ -115,8 +112,8 @@ public class CSVParser {
 
 		for (Plan p : plans) {
 			for (Task t : p.getTasks()) {
-				printer.printRecord(t.getID(), t.getPlanID(), p.getPriority(), t.getResourceID(),
-						t.getReleaseTime(), t.getProcessingTime());
+				printer.printRecord(t.getID(), t.getPlanID(), p.getPriority(), t.getResourceID(), t.getReleaseTime(),
+						t.getProcessingTime());
 			}
 
 		}

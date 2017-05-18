@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -127,7 +128,7 @@ public class Scheduler {
 			if (!prioritiesCountMap.containsKey(x.getPriority())) {
 				prioritiesCountMap.put(x.getPriority(), 1);
 			} else {
-				prioritiesCountMap.put(x.getPriority(), prioritiesCountMap.get(x.getPriority() + 1));
+				prioritiesCountMap.put(x.getPriority(), prioritiesCountMap.get(x.getPriority()) + 1);
 			}
 		});
 
@@ -144,7 +145,6 @@ public class Scheduler {
 			}
 
 			if (prioritiesCountMap.get(pk.getPriority()) == 1) {
-				System.err.println("Priority 1 for plan #" + Integer.toString(pk.getID()));
 				boolean scheduled = SchedulePlan(pk, workingSolution, events, maxResourceCapacity);
 
 				if (scheduled) {
@@ -163,11 +163,12 @@ public class Scheduler {
 				toSchedule.add(pk);
 				toSchedule.addAll(
 						plans.stream().filter(x -> x.getPriority() == pk.getPriority()).collect(Collectors.toList()));
+				plans.removeAll(toSchedule);
 
 				// Handle here the plans that have the same priority
 				SchedulePlansWithSamePriority(toSchedule, workingSolution, events, maxResourceCapacity);
-				
-				//...
+
+				// ...
 			}
 
 		}
@@ -176,10 +177,48 @@ public class Scheduler {
 		return lastFeasibleSolution;
 	}
 
+	/**
+	 * Schedule multiple plans that have the same priority value.
+	 * 
+	 * @param plans
+	 * @param workingSolution
+	 * @param events
+	 * @param maxResourceCapacity
+	 * @return
+	 */
 	private static boolean SchedulePlansWithSamePriority(List<Plan> plans, Schedule workingSolution,
 			TreeSet<Event> events, int maxResourceCapacity) {
 
-		// TODO to implement
+		Map<Plan, TreeSet<Event>> validPlans = new HashMap<>();
+		Map<Plan, List<Integer>> tasksSorted = new HashMap<>();
+
+		// Generate "intermediate" solutions by scheduling each single plan into
+		// the actual solution
+		for (Plan p : plans) {
+			Schedule S = null;
+			TreeSet<Event> E = null;
+			try {
+				S = (Schedule) workingSolution.clone();
+				E = (TreeSet<Event>) events.clone();
+			} catch (CloneNotSupportedException e) {
+				e.printStackTrace();
+			}
+			boolean scheduled = SchedulePlan(p, S, E, maxResourceCapacity);
+
+			if (scheduled) {
+				validPlans.put(p, E);
+
+				// Keep the topologically sorted set of tasks for the plan p
+				Collection<ExecutableNode> tasks = p.getTasks().stream().map(x -> (ExecutableNode) x)
+						.collect(Collectors.toList());
+				List<Integer> sortedTasks = TopologicalSorting.calculateTopologicalOrderScores(tasks).stream()
+						.map(x -> x.left).collect(Collectors.toList());
+				tasksSorted.put(p, sortedTasks);
+			}
+		}
+
+		// Now assemble the final solution...
+
 		return true;
 	}
 
@@ -203,7 +242,7 @@ public class Scheduler {
 				continue;
 			}
 
-			if (!scheduleWithEvents(maxResourceCapacity, workingSolution, t, events)) {
+			if (!scheduleTask(maxResourceCapacity, workingSolution, t, events)) {
 				pk.setSchedulable(false);
 				break;
 			}
@@ -234,8 +273,7 @@ public class Scheduler {
 	 * @param events
 	 * @return
 	 */
-	private static boolean scheduleWithEvents(final int maxResourceCapacity, Schedule s, Task t,
-			NavigableSet<Event> events) {
+	private static boolean scheduleTask(final int maxResourceCapacity, Schedule s, Task t, NavigableSet<Event> events) {
 		int sk = getInitialStartingTime(s.getWStart(), events, t);
 		// Start event!
 		Event e = EventUtils.getPreviousEvent(sk, t.getResourceID(), true, events).get();

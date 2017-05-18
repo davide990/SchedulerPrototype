@@ -26,7 +26,7 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 		this.processingTime = processingTime;
 		this.planPriority = planPriority;
 		this.predecessors = new ArrayList<>(predecessors);
-		this.successors = new ArrayList<>(predecessors);
+		this.successors = new ArrayList<>();
 	}
 
 	@Override

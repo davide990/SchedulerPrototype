@@ -163,7 +163,7 @@ public class PlanImpl extends ExecutableNode implements Plan {
 
 	@Override
 	public Collection<Task> getTasks() {
-		return Collections.unmodifiableCollection(tasks.values());
+		return tasks.values();
 
 	}
 
