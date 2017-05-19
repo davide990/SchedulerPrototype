@@ -3,7 +3,6 @@ package org.lip6.scheduler;
 import java.util.List;
 
 public abstract class ExecutableNode {
-	// void execute(String[] args);
 
 	public abstract List<Integer> getSuccessors();
 

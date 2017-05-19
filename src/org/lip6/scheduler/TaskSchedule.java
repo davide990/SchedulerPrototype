@@ -17,7 +17,7 @@ public class TaskSchedule implements Cloneable {
 
 	@Override
 	protected Object clone() throws CloneNotSupportedException {
-		return new TaskSchedule((Task)task.clone(), startingTime, resource);
+		return new TaskSchedule((Task) task.clone(), startingTime, resource);
 	}
 
 	public Task getTask() {

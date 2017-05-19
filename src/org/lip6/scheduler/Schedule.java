@@ -11,8 +11,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.Queue;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import org.lip6.scheduler.utils.Utils;
@@ -38,8 +36,6 @@ public class Schedule implements Cloneable {
 	 * times of the schedules.
 	 */
 	private final Queue<TaskSchedule> schedule;
-
-	private final static Logger logger = Logger.getLogger(Schedule.class.getName());
 
 	private Schedule(int numResources, int wStart, int wEnd) {
 		this.numResources = numResources;

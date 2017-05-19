@@ -32,8 +32,6 @@ public interface Plan {
 
 	int getNumberOfTasks();
 
-	// void updateTask(ExecutableNode t);
-
 	boolean isSchedulable();
 
 	void setSchedulable(boolean schedulable);

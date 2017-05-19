@@ -4,18 +4,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
@@ -34,9 +31,6 @@ import org.lip6.scheduler.utils.CSVParser;
 import org.lip6.scheduler.utils.Utils;
 
 public class Scheduler {
-
-	private static final int MAX_TABU_TURNS = 10;
-	private static final int MAX_TABU_TRIES = 10;
 
 	private static final Comparator<Plan> PLAN_COMPARATOR = new Comparator<Plan>() {
 		@Override
@@ -293,11 +287,7 @@ public class Scheduler {
 	 * @return the sum of all the dead times
 	 */
 	private static int getTotalDeadTime(Plan p, TreeSet<Event> events) {
-		int deadTime = 0;
-		for (Task t : p.getTasks()) {
-			deadTime += getDeadTime(t, events);
-		}
-		return deadTime;
+		return p.getTasks().stream().mapToInt(t -> getDeadTime(t, events)).sum();
 	}
 
 	/**
@@ -344,7 +334,7 @@ public class Scheduler {
 			// Check precedence constraints
 			if (!checkPrecedences(workingSolution, t)) {
 				pk.setSchedulable(false);
-				break; // TODO maybe break is more appropriate?
+				break;
 			}
 
 			if (!scheduleTask(maxResourceCapacity, workingSolution, t, events)) {
@@ -536,7 +526,7 @@ public class Scheduler {
 	 * @param t
 	 * @param s
 	 */
-	private static boolean checkConstraints(Task t, int startingTime, Schedule s) {
+	private static boolean checkConstraints(final Task t, int startingTime, final Schedule s) {
 		// Check for the starting time to be inside the allowed boundaries
 		try {
 			// Checks for the starting time to be inside [rk,dk]
@@ -575,7 +565,7 @@ public class Scheduler {
 	 * @return <b>true</b> if all the predecessors of t are scheduled in s,
 	 *         <b>false</b> otherwise
 	 */
-	private static boolean checkPrecedences(Schedule s, Task t) {
+	private static boolean checkPrecedences(final Schedule s, final Task t) {
 		// From the list of the actually scheduled task, take those who are
 		// predecessors of the task t
 		List<Integer> scheduledPredecessors = s.taskSchedules().stream()

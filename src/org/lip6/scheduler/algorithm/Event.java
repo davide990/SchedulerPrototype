@@ -122,7 +122,6 @@ public class Event implements Cloneable, Comparable<Event> {
 
 	@Override
 	protected Object clone() throws CloneNotSupportedException {
-		//System.err.println("Cloning " + toString());
 		Event cloned = Event.get(getTime(), resourceCapacity.keySet().size());
 		cloned.starting = new HashSet<>(starting);
 		cloned.terminating = new HashSet<>(terminating);
