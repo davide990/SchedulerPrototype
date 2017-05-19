@@ -5,6 +5,7 @@ import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import org.lip6.scheduler.Task;
@@ -48,11 +49,28 @@ public class EventUtils {
 	}
 
 	public static Optional<Event> getPreviousEvent(Event v, NavigableSet<Event> events) {
+		return getPreviousEvent(v, events, false);
+	}
+
+	public static Optional<Event> getPreviousEvent(Event v, NavigableSet<Event> events, boolean inclusive) {
 		try {
-			return Optional.of(events.headSet(v).last());
+			return Optional.of(events.headSet(v, inclusive).last());
 		} catch (NoSuchElementException ex) {
 			return Optional.empty();
 		}
+	}
+
+	public static TreeSet<Event> cloneSet(TreeSet<Event> events) {
+		TreeSet<Event> E = new TreeSet<>();
+		for (Event x : events) {
+			try {
+				E.add((Event) x.clone());
+			} catch (CloneNotSupportedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		return E;
 	}
 
 }

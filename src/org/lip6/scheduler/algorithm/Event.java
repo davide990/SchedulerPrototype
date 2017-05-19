@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 
 import org.lip6.scheduler.Task;
 
-public class Event {
+public class Event implements Cloneable, Comparable<Event> {
 	private final int time;
 	private Set<Task> starting;
 	private Set<Task> terminating;
@@ -118,6 +118,21 @@ public class Event {
 		if (time != other.time)
 			return false;
 		return true;
+	}
+
+	@Override
+	protected Object clone() throws CloneNotSupportedException {
+		//System.err.println("Cloning " + toString());
+		Event cloned = Event.get(getTime(), resourceCapacity.keySet().size());
+		cloned.starting = new HashSet<>(starting);
+		cloned.terminating = new HashSet<>(terminating);
+		cloned.resourceCapacity = new HashMap<>(resourceCapacity);
+		return cloned;
+	}
+
+	@Override
+	public int compareTo(Event o) {
+		return Integer.compare(getTime(), o.time);
 	}
 
 }

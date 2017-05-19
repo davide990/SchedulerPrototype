@@ -174,7 +174,7 @@ public class Scheduler {
 							.filter(x -> ((Task) x.getTask()).getPlanID() == p.getID()).collect(Collectors.toList());
 					workingSolution.unSchedule(toRemove);
 				}
-				
+
 				try {
 					lastFeasibleSolution = (Schedule) workingSolution.clone();
 				} catch (CloneNotSupportedException e) {
@@ -202,138 +202,129 @@ public class Scheduler {
 			TreeSet<Event> events, int maxResourceCapacity) {
 
 		Map<Plan, TreeSet<Event>> validPlans = new HashMap<>();
-		Map<Plan, List<Integer>> tasksSorted = new HashMap<>();
 
 		// Generate "intermediate" solutions by scheduling each single plan into
 		// the actual solution
 		for (Plan p : plans) {
 			Schedule S = null;
 			TreeSet<Event> E = null;
+
 			try {
 				S = (Schedule) workingSolution.clone();
-				E = (TreeSet<Event>) events.clone();
 			} catch (CloneNotSupportedException e) {
+				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			E = EventUtils.cloneSet(events);
 			// Try to schedule the plan p
 			boolean scheduled = SchedulePlan(p, S, E, maxResourceCapacity);
 
 			if (scheduled) {
 				// Keep the plan p as it generates itself a solution
 				validPlans.put(p, E);
-				// Get the tasks of p
-				Collection<ExecutableNode> tasks = p.getTasks().stream().map(x -> (ExecutableNode) x)
-						.collect(Collectors.toList());
-
-				// Sort the tasks in a topological order
-				List<Integer> sortedTasks = TopologicalSorting.calculateTopologicalOrderScores(tasks).stream()
-						.map(x -> x.left).collect(Collectors.toList());
-				// Reverse the list of sorted tasks
-				Collections.reverse(sortedTasks);
-				// Keep the list of topologically sorted tasks
-				tasksSorted.put(p, sortedTasks);
-
-				System.err.println("Sorted tasks of plan #" + Integer.toString(p.getID()) + "->"
-						+ sortedTasks.stream().map(x -> Integer.toString(x)).collect(Collectors.joining(",")));
 			}
 		}
+		List<Plan> unscheduled = new ArrayList<>();
+		Queue<Plan> validPlansList = new PriorityQueue<>(new Comparator<Plan>() {
+			@Override
+			public int compare(Plan o1, Plan o2) {
+				return Integer.compare(o1.getID(), o2.getID());
+			}
+		});// (validPlans.keySet());
+		validPlansList.addAll(validPlans.keySet());
 
-		Map<Integer, List<Task>> sortedByResource = new HashMap<>();
+		System.err.println("Valid plans: "
+				+ validPlansList.stream().map(x -> Integer.toString(x.getID())).collect(Collectors.joining(",")));
 
-		for (Plan plan : tasksSorted.keySet()) {
-			// And each task in topological order
-			for (Integer taskID : tasksSorted.get(plan)) {
-				Task task = plan.getTask(taskID);
-				if (sortedByResource.containsKey(task.getResourceID())) {
-					sortedByResource.get(task.getResourceID()).add(task);
+		while (!validPlansList.isEmpty()) {
+
+			Optional<Plan> toInsert = Optional.empty();
+			Optional<Plan> toDelete = Optional.empty();
+			int bestDeadTime = Integer.MAX_VALUE;
+			for (Plan p : validPlansList) {
+				Schedule S = null;
+				TreeSet<Event> E = null;
+
+				if (p.getID() == 3) {
+					System.err.println();
+				}
+
+				try {
+					S = (Schedule) workingSolution.clone();
+				} catch (CloneNotSupportedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				E = EventUtils.cloneSet(events);
+				// Try to schedule the plan p
+				boolean scheduled = SchedulePlan(p, S, E, maxResourceCapacity);
+				int d = getTotalDeadTime(p, E);
+				System.err.println("Dead time for " + Integer.toString(p.getID()) + ": " + d);
+				if (scheduled && d < bestDeadTime) {
+					toInsert = Optional.of(p);
+					bestDeadTime = d;
+					System.err.println("Best dead time: " + bestDeadTime + " for plan #" + p.getID());
 				} else {
-					List<Task> l = new ArrayList<>();
-					l.add(task);
-					sortedByResource.put(task.getResourceID(), l);
+					toDelete = Optional.of(p);
 				}
 			}
-		}
-		List<Task> unscheduledTasks = new ArrayList<>();
-		List<Integer> unscheduledPlans = new ArrayList<>();
-		for (Integer resourceID : sortedByResource.keySet()) {
-			int minorResidualTime = Integer.MAX_VALUE;
-			Optional<Task> bestTask = Optional.empty();
 
-			while (!sortedByResource.get(resourceID).isEmpty()) {
-				unscheduledTasks.clear();
-				for (Task t : sortedByResource.get(resourceID)) {
-					Schedule S = null;
-					TreeSet<Event> E = null;
-					try {
-						S = (Schedule) workingSolution.clone();
-						E = (TreeSet<Event>) events.clone();
-					} catch (CloneNotSupportedException e) {
-						e.printStackTrace();
-					}
-					System.err.println("Scheduling task #"+t);
-					boolean success = scheduleTask(maxResourceCapacity, S, t, E);
-
-					if (!success) {
-						unscheduledTasks.add(t);
-						if (!unscheduledPlans.contains(t.getPlanID())) {
-							unscheduledPlans.add(t.getPlanID());
-						}
-						continue;
-					}
-
-					int td = getTimeDifferenceBetween(t, events);
-					//System.err.println("Residual time for " + t + ": " + Integer.toString(td));
-					if (td < minorResidualTime) {
-						minorResidualTime = td;
-						bestTask = Optional.of(t);
-					}
-				}
-
-				sortedByResource.get(resourceID).removeAll(unscheduledTasks);
-				unscheduledTasks.clear();
-
-				if (bestTask.isPresent()) {
-					System.err.println("For res #" + Integer.toString(resourceID) + " best task is " + bestTask.get());
-					scheduleTask(maxResourceCapacity, workingSolution, bestTask.get(), events);
-					sortedByResource.get(resourceID).remove(bestTask.get());
-				}
-
+			if (toInsert.isPresent()) {
+				System.err.println("Schedulign plan #" + toInsert.get().getID());
+				SchedulePlan(toInsert.get(), workingSolution, events, maxResourceCapacity);
+				validPlansList.remove(toInsert.get());
+			} else {
+				validPlansList.remove(toDelete.get());
+				unscheduled.add(toDelete.get());
 			}
 		}
 
-		return plans.stream().filter(x -> unscheduledPlans.contains(x.getID())).collect(Collectors.toList());
+		return unscheduled;
 	}
 
 	/**
-	 * Calcola lo spazio morto tra l'evento in cui t è stato allocato e il suo
-	 * immediato predecessore
+	 * Calculate the sum of all the dead times between each task in the given
+	 * plan and their predecessors.
+	 * 
+	 * @param p
+	 *            a plan
+	 * @param events
+	 *            a set of events
+	 * @return the sum of all the dead times
+	 */
+	private static int getTotalDeadTime(Plan p, TreeSet<Event> events) {
+		int deadTime = 0;
+		for (Task t : p.getTasks()) {
+			deadTime += getDeadTime(t, events);
+		}
+		return deadTime;
+	}
+
+	/**
+	 * Calculate the dead time between the task given as parameter and its
+	 * immediate predecessor allocated in the same resource.
 	 * 
 	 * @param t
+	 *            a task
 	 * @param events
-	 * @return
+	 *            a set of events
+	 * @return the dead time between t and its immediate predecessor.
 	 */
-	private static Integer getTimeDifferenceBetween(Task t, TreeSet<Event> events) {
+	private static Integer getDeadTime(final Task t, final TreeSet<Event> events) {
 		Optional<Event> e = events.stream().filter(x -> x.taskStartingHere().contains(t)).findFirst();
 
-		if (e.isPresent()) {
-			Optional<Event> previousEvent = EventUtils.getPreviousEvent(e.get(), events);
-
-			// Se vi è un evento precedente a quello in cui il task è stato
-			// allocato
-			if (previousEvent.isPresent()) {
-				// Prendi l'accomplishment date dell'ultimo task allocato nella
-				// stessa risorsa nell'evento trovato (se presente)
-				Optional<Task> l = previousEvent.get().taskStartingHere().stream()
-						.filter(x -> x.getResourceID() == t.getResourceID()).findFirst();
-
-				if (l.isPresent()) {
-					return e.get().getTime() - previousEvent.get().getTime();
-				}
-
-			}
+		if (!e.isPresent()) {
+			return 0;
 		}
+		// Find the previous event, previous to the event in which t starts,
+		// that has a task allocated to the same resource of t, OR ELSE get
+		// the previous event, that is the event corresponding to Ws time.
+		Event previousEvent = events.stream()
+				.filter(x -> x.getTime() < e.get().getTime() && x.getResourceCapacity(t.getResourceID()) > 0)
+				.max(Event.getComparator()).orElseGet(() -> EventUtils.getPreviousEvent(e.get(), events, true).get());
 
-		return -1;
+		return e.get().getTime() - previousEvent.getTime();
+
 	}
 
 	/**
