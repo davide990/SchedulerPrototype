@@ -109,9 +109,11 @@ public class Scheduler {
 		plans.forEach(p -> p.setInversePriority(maxPriority));
 
 		// Sort the plans so that the precedences are respected
-		// List<ExecutableNode> pl = sortPlans(plans.stream().map(x ->
-		// (ExecutableNode) x).collect(Collectors.toList()));
-		// plans = pl.stream().map(x -> (Plan) x).collect(Collectors.toList());
+		List<ExecutableNode> pl = sortPlansOrTasks(
+				plans.stream().map(x -> (ExecutableNode) x).collect(Collectors.toList()));
+		plans = pl.stream().map(x -> (Plan) x).collect(Collectors.toList());
+
+		System.exit(0);
 
 		sortByPriorities(plans);
 
@@ -206,7 +208,6 @@ public class Scheduler {
 			try {
 				S = (Schedule) workingSolution.clone();
 			} catch (CloneNotSupportedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			E = EventUtils.cloneSet(events);
@@ -238,10 +239,6 @@ public class Scheduler {
 			for (Plan p : validPlansList) {
 				Schedule S = null;
 				TreeSet<Event> E = null;
-
-				if (p.getID() == 3) {
-					System.err.println();
-				}
 
 				try {
 					S = (Schedule) workingSolution.clone();
@@ -488,25 +485,30 @@ public class Scheduler {
 	}
 
 	/**
-	 * Calculate the topological sorting for the input set of plans. This ensure
-	 * that the precedences between the plans are respected. Also, the plans
-	 * with the same priority are then sorted according to user-defined criteria
+	 * Calculate the topological sorting for the input set of plans or tasks.
+	 * This ensure that the precedences constraints are respected. Also, the
+	 * plans with the same priority are then sorted according to user-defined
+	 * criteria
 	 * 
-	 * @param plans
+	 * @param nodes
 	 * @return
 	 */
-	private static List<ExecutableNode> sortPlans(final List<ExecutableNode> plans) {
-		List<ExecutableNode> sorted = new ArrayList<>(plans);
+	private static List<ExecutableNode> sortPlansOrTasks(final List<ExecutableNode> nodes) {
+		List<ExecutableNode> sorted = new ArrayList<>(nodes);
 
-		Stack<ImmutablePair<Integer, Integer>> orderScore = TopologicalSorting.calculateTopologicalOrderScores(sorted);
+		// Sort topologically the nodes
+		Stack<ImmutablePair<Integer, Integer>> orderScore = TopologicalSorting.getPlansFrontiers(sorted);
 
-		ExecutableNode source = plans.stream().min(new Comparator<ExecutableNode>() {
+		// Get the source node
+		ExecutableNode source = nodes.stream().min(new Comparator<ExecutableNode>() {
 			@Override
 			public int compare(ExecutableNode o1, ExecutableNode o2) {
 				return Integer.compare(o1.getID(), o2.getID());
 			}
 		}).get();
 
+		// Execute the Bellman-Ford algorithm to get all the distances values
+		// from to source node to each vertex
 		return TopologicalSorting.bellmanFord(source, sorted, orderScore);
 	}
 

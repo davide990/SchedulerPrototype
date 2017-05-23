@@ -16,19 +16,19 @@ import org.lip6.scheduler.ExecutableNode;
 
 public class TopologicalSorting {
 	/**
-	 * 
 	 * returns a stack of pairs(A,B) where A is a plan and B the index of its
-	 * frontier
+	 * frontier. The element on the stack are sorted according to the
+	 * topological sorting of the plans/tasks.
 	 * 
-	 * @param plans
+	 * @param nodes
+	 *            a collection of plans <b>or</b> tasks
 	 */
-	public static Stack<ImmutablePair<Integer, Integer>> calculateTopologicalOrderScores(
-			Collection<ExecutableNode> plans) {
+	public static Stack<ImmutablePair<Integer, Integer>> getPlansFrontiers(Collection<ExecutableNode> nodes) {
 		// Find the root node, that is, the node which doesn't appair as
 		// successor of all the other nodes
 		Optional<ExecutableNode> root = Optional.empty();
-		for (ExecutableNode p : plans) {
-			if (plans.stream().filter(x -> x.getSuccessors().contains(p.getID())).count() == 0) {
+		for (ExecutableNode p : nodes) {
+			if (nodes.stream().filter(x -> x.getSuccessors().contains(p.getID())).count() == 0) {
 				root = Optional.of(p);
 				break;
 			}
@@ -38,7 +38,7 @@ public class TopologicalSorting {
 		if (!root.isPresent()) {
 			throw new IllegalArgumentException("Wrong plans precedences. No valid root node found.");
 		}
-		return topologicalSort(new ArrayList<>(plans));
+		return topologicalSort(new ArrayList<>(nodes));
 	}
 
 	/**
@@ -99,7 +99,7 @@ public class TopologicalSorting {
 		Map<Integer, Integer> planScores = new HashMap<>();
 		Map<Integer, LinkedList<AdjListNode>> adj = GraphUtils.getAdjacencyList(plans);
 
-		GraphUtils.printAdjacencyList(adj);
+		// GraphUtils.printAdjacencyList(adj);
 
 		Stack<ImmutablePair<Integer, Integer>> stack = new Stack<>();
 		int frontierIndex = 0;
@@ -161,6 +161,7 @@ public class TopologicalSorting {
 			}
 		}
 
+		//Finally, sort the plans by the their distances
 		return sortPlansByDistance(plans, planScores, topologicalOrder);
 	}
 
