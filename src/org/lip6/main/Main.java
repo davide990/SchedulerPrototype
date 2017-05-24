@@ -14,8 +14,8 @@ public class Main {
 
 	public static void main(String[] args) {
 		int WStart = 2;
-		int WEnd = 15;
-		int maxResourceCapacity = 2;
+		int WEnd = 10;
+		int maxResourceCapacity = 1;
 		List<Criteria> criterias = new ArrayList<>();
 		criterias.add(new Criteria(Plan::getInversePriority, "Plan Priority", 1f));
 		criterias.add(new Criteria(Plan::getNumberOfTasks, "Number of Tasks", 0.1f));

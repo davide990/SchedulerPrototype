@@ -3,10 +3,22 @@ package org.lip6.scheduler;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.Stack;
 import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.lip6.graph.TopologicalSorting;
 
 public class PlanImpl extends ExecutableNode implements Plan {
 
@@ -19,11 +31,10 @@ public class PlanImpl extends ExecutableNode implements Plan {
 	private int endTime;
 	private float planScore;
 
-	final LinkedHashMap<Integer, Task> tasks = new LinkedHashMap<>();
-	final List<Integer> successors;
+	// final Map<Integer, Task> tasks = new HashMap<>();
+	final List<Task> tasks = new LinkedList<>();
 
-	// private final static Logger logger =
-	// Logger.getLogger(PlanImpl.class.getName());
+	final List<Integer> successors;
 
 	private PlanImpl(int ID, int priority) {
 		this.planScore = -1;
@@ -129,13 +140,16 @@ public class PlanImpl extends ExecutableNode implements Plan {
 		Task t = (Task) task;
 
 		Objects.requireNonNull(t);
-		if (tasks.putIfAbsent(task.getID(), t) != null) {
+
+		if (tasks.stream().filter(x -> x.getID() == task.getID()).findFirst().isPresent()) {
 			throw new IllegalArgumentException("Task is already in plan");
 		}
 
 		if (t.getPlanID() != ID) {
 			throw new IllegalArgumentException("Task ID is different from plan ID.");
 		}
+
+		tasks.add(t);
 
 		// Update the execution time of this plan
 		if (t.getReleaseTime() <= startTime) {
@@ -145,11 +159,52 @@ public class PlanImpl extends ExecutableNode implements Plan {
 			endTime = t.getDueDate();
 		}
 		executionTime = endTime - startTime;
+
+		sortTasks();
+	}
+
+	/**
+	 * Calculate the topological sorting for the tasks in this plan. This ensure
+	 * that the precedences constraints are respected.
+	 * 
+	 * @param nodes
+	 * @return
+	 */
+
+	private void sortTasks() {
+		List<ExecutableNode> sorted = tasks.stream().map(x -> (ExecutableNode) x).collect(Collectors.toList());
+
+		// Sort topologically the nodes
+		Stack<ImmutablePair<Integer, Integer>> orderScore = TopologicalSorting.getPlansFrontiers(sorted);
+
+		// Get the source node
+		ExecutableNode source = sorted.stream().min(new Comparator<ExecutableNode>() {
+			@Override
+			public int compare(ExecutableNode o1, ExecutableNode o2) {
+				return Integer.compare(o1.getID(), o2.getID());
+			}
+		}).get();
+
+		// Execute the Bellman-Ford algorithm to get all the distances values
+		// from to source node to each vertex
+		List<Task> s = TopologicalSorting.bellmanFord(source, sorted, orderScore).stream().map(x -> (Task) x)
+				.collect(Collectors.toList());
+		Collections.reverse(s);
+
+		// System.err.println("Topological sort for plan
+		// #"+Integer.toString(ID)+"->");
+		// System.err.println(s.stream().map(x->Integer.toString(x.getID())).collect(Collectors.joining(",")));
+
+		tasks.clear();
+		for (int i = 0; i < s.size(); i++) {
+			tasks.add(s.get(i));
+		}
+
 	}
 
 	@Override
-	public Task getTask(int taskID) {
-		return tasks.getOrDefault(taskID, null);
+	public Task getTask(int taskID) throws NoSuchElementException {
+		return tasks.stream().filter(x -> x.getID() == taskID).findFirst().get();
 	}
 	/*
 	 * @Override public void updateTask(ExecutableNode task) { if (!(task
@@ -160,7 +215,7 @@ public class PlanImpl extends ExecutableNode implements Plan {
 
 	@Override
 	public Collection<Task> getTasks() {
-		return tasks.values();
+		return tasks.stream().collect(Collectors.toList());
 
 	}
 
@@ -177,7 +232,7 @@ public class PlanImpl extends ExecutableNode implements Plan {
 	@Override
 	public String toString() {
 		return "Plan [ID=" + ID + ", tasks=[\n\t"
-				+ tasks.values().stream().map(Task::toString).collect(Collectors.joining("\n\t")) + "]";
+				+ getTasks().stream().map(Task::toString).collect(Collectors.joining("\n\t")) + "]";
 	}
 
 	@Override
