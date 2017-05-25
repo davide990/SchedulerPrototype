@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -18,7 +17,6 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.Stack;
 import java.util.TreeSet;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -374,7 +372,6 @@ public class Scheduler {
 
 		// Start event!
 		Event e = EventUtils.getPreviousEvent(sk, numResources, true, events).get();
-
 		Event f = e;
 		Event g = f;
 		int mi = t.getProcessingTime();
