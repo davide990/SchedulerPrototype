@@ -105,10 +105,7 @@ public class Scheduler {
 		Queue<Plan> unscheduledPlans = new PriorityQueue<>(PLAN_COMPARATOR);
 
 		// Sort the plans so that the precedences are respected
-		List<ExecutableNode> pl = sortPlansOrTasks(
-				plans.stream().map(x -> (ExecutableNode) x).collect(Collectors.toList()));
-		plans = pl.stream().map(x -> (Plan) x).collect(Collectors.toList());
-		sortByPriorities(plans);
+		plans = sortPlansByPrecedence(plans.stream().map(x -> (ExecutableNode) x).collect(Collectors.toList()));
 
 		// This map will contains the number of plans that have a specific
 		// priority value.
@@ -555,33 +552,19 @@ public class Scheduler {
 	 * @param nodes
 	 * @return
 	 */
-	private static List<ExecutableNode> sortPlansOrTasks(final List<ExecutableNode> nodes) {
+	private static List<Plan> sortPlansByPrecedence(final List<ExecutableNode> nodes) {
 		List<ExecutableNode> sorted = new ArrayList<>(nodes);
 
-		// Sort topologically the nodes
+		// Sort topologically the nodes (left -> plan, right -> frontier)
 		Stack<ImmutablePair<Integer, Integer>> orderScore = TopologicalSorting.getPlansFrontiers(sorted);
+		List<Plan> output = new ArrayList<>();
 
-		// Get the source node
-		ExecutableNode source = nodes.stream().min(new Comparator<ExecutableNode>() {
-			@Override
-			public int compare(ExecutableNode o1, ExecutableNode o2) {
-				return Integer.compare(o1.getID(), o2.getID());
-			}
-		}).get();
-
-		// Execute the Bellman-Ford algorithm to get all the distances values
-		// from to source node to each vertex
-		return TopologicalSorting.bellmanFord(source, sorted, orderScore);
-	}
-
-	private static void sortByPriorities(List<Plan> plans) {
-
-		// TODO la modifica effettivamente?
-		plans.stream().sorted(new Comparator<Plan>() {
-			public int compare(Plan o1, Plan o2) {
-				return -Integer.compare(o1.getPriority(), o2.getPriority());
-			};
-		});
+		// Assemble the sorted list of plans
+		while (!orderScore.isEmpty()) {
+			int left = orderScore.pop().left;
+			output.add(nodes.stream().map(x -> (Plan) x).filter(x -> x.getID() == left).findFirst().get());
+		}
+		return output;
 	}
 
 	/**
