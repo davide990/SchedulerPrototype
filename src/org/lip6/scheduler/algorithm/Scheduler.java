@@ -104,18 +104,12 @@ public class Scheduler {
 		Queue<Plan> scheduledPlans = new PriorityQueue<>(PLAN_COMPARATOR);
 		Queue<Plan> unscheduledPlans = new PriorityQueue<>(PLAN_COMPARATOR);
 
-		// Calculate the inverse priority for each plan
-		// int maxPriority =
-		// Collections.max(plans.stream().map(Plan::getPriority).collect(Collectors.toList()));
-		// plans.forEach(p -> p.setInversePriority(maxPriority));
-
 		// Sort the plans so that the precedences are respected
-		/*
-		 * List<ExecutableNode> pl = sortPlansOrTasks( plans.stream().map(x ->
-		 * (ExecutableNode) x).collect(Collectors.toList())); plans =
-		 * pl.stream().map(x -> (Plan) x).collect(Collectors.toList());
-		 * sortByPriorities(plans);
-		 */
+		List<ExecutableNode> pl = sortPlansOrTasks(
+				plans.stream().map(x -> (ExecutableNode) x).collect(Collectors.toList()));
+		plans = pl.stream().map(x -> (Plan) x).collect(Collectors.toList());
+		sortByPriorities(plans);
+
 		// This map will contains the number of plans that have a specific
 		// priority value.
 		// The key is a priority value, and the value is the number of plans
@@ -143,12 +137,9 @@ public class Scheduler {
 			}
 
 			if (prioritiesCountMap.get(pk.getPriority()) == 1) {
-
 				boolean scheduled = SchedulePlan(pk, workingSolution, events, maxResourceCapacity, numResources);
-
 				if (scheduled) {
 					scheduledPlans.add(pk);
-
 					try {
 						lastFeasibleSolution = (Schedule) workingSolution.clone();
 					} catch (CloneNotSupportedException e) {
@@ -175,15 +166,12 @@ public class Scheduler {
 				}
 
 				toSchedule.removeAll(unscheduled);
-
 				try {
 					lastFeasibleSolution = (Schedule) workingSolution.clone();
 				} catch (CloneNotSupportedException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
-
 		}
 
 		events.forEach(x -> System.err.println(x));
@@ -236,11 +224,23 @@ public class Scheduler {
 		System.err.println("Valid plans: "
 				+ validPlansList.stream().map(x -> Integer.toString(x.getID())).collect(Collectors.joining(",")));
 
-		while (!validPlansList.isEmpty()) {
+		// keep the processing time of each task
+		Map<Integer, Integer> processingTimes = new HashMap<>();
+		for (Plan p : validPlansList) {
+			for (Task t : p.getTasks()) {
+				if (processingTimes.containsKey(t.getProcessingTime())) {
+					processingTimes.put(t.getProcessingTime(), processingTimes.get(t.getProcessingTime()) + 1);
+				} else {
+					processingTimes.put(t.getProcessingTime(), 1);
+				}
+			}
+		}
 
+		while (!validPlansList.isEmpty()) {
 			Optional<Plan> toInsert = Optional.empty();
 			Optional<Plan> toDelete = Optional.empty();
 			int bestDeadTime = Integer.MAX_VALUE;
+
 			for (Plan p : validPlansList) {
 				Schedule S = null;
 				TreeSet<Event> E = null;
@@ -254,8 +254,9 @@ public class Scheduler {
 				E = EventUtils.cloneSet(events);
 				// Try to schedule the plan p
 				boolean scheduled = SchedulePlan(p, S, E, maxResourceCapacity, numResources);
-				int d = getTotalDeadTime(p, E);
-				System.err.println("Dead time for " + Integer.toString(p.getID()) + ": " + d);
+
+				int d = getDeadTime(p, E, processingTimes);
+				System.err.println("Dead times for " + Integer.toString(p.getID()) + ": " + d);
 				if (scheduled && d < bestDeadTime) {
 					toInsert = Optional.of(p);
 					bestDeadTime = d;
@@ -269,6 +270,11 @@ public class Scheduler {
 				System.err.println("Schedulign plan #" + toInsert.get().getID());
 				SchedulePlan(toInsert.get(), workingSolution, events, maxResourceCapacity, numResources);
 				validPlansList.remove(toInsert.get());
+
+				for (Task t : toInsert.get().getTasks()) {
+					processingTimes.replace(t.getProcessingTime(), processingTimes.get(t.getProcessingTime()) - 1);
+				}
+
 			} else {
 				validPlansList.remove(toDelete.get());
 				unscheduled.add(toDelete.get());
@@ -279,17 +285,24 @@ public class Scheduler {
 	}
 
 	/**
-	 * Calculate the sum of all the dead times between each task in the given
-	 * plan and their predecessors.
+	 * For a given scheduled plan <b>p</b>, this method measures the dead times
+	 * between each task and its predecessor on the same resource. A dead time
+	 * occurs when between the accomplishment date of a task and the starting
+	 * time of its successor, a task can be placed.
 	 * 
 	 * @param p
-	 *            a plan
+	 *            a scheduled plan
 	 * @param events
-	 *            a set of events
-	 * @return the sum of all the dead times
+	 *            the events list containing the tasks from <b>p</b>
+	 * @param processingTimes
+	 *            A map containing as key a processing time, and as value the
+	 *            number of tasks, from a plan set, that have the processing
+	 *            time specified as key
+	 * @return the number of tasks that can be placed in the times between each
+	 *         task of <b>p</b> and their predecessors.
 	 */
-	private static int getTotalDeadTime(Plan p, TreeSet<Event> events) {
-		return p.getTasks().stream().mapToInt(t -> getDeadTime(t, events)).sum();
+	private static int getDeadTime(final Plan p, final TreeSet<Event> events, Map<Integer, Integer> processingTimes) {
+		return p.getTasks().stream().mapToInt(t -> getTaskDeadTime(t, events, processingTimes)).sum();
 	}
 
 	/**
@@ -297,12 +310,12 @@ public class Scheduler {
 	 * immediate predecessor allocated in the same resource.
 	 * 
 	 * @param t
-	 *            a task
 	 * @param events
-	 *            a set of events
-	 * @return the dead time between t and its immediate predecessor.
+	 * @param taskProcessingTimes
+	 * @return
 	 */
-	private static Integer getDeadTime(final Task t, final TreeSet<Event> events) {
+	private static Integer getTaskDeadTime(final Task t, final TreeSet<Event> events,
+			Map<Integer, Integer> taskProcessingTimes) {
 		Optional<Event> e = events.stream().filter(x -> x.taskStartingHere().contains(t)).findFirst();
 
 		if (!e.isPresent()) {
@@ -315,8 +328,14 @@ public class Scheduler {
 				.filter(x -> x.getTime() < e.get().getTime() && x.getResourceCapacity(t.getResourceID()) > 0)
 				.max(Event.getComparator()).orElseGet(() -> EventUtils.getPreviousEvent(e.get(), events, true).get());
 
-		return e.get().getTime() - previousEvent.getTime();
-
+		// td <- size of the hole generated by task t
+		int td = e.get().getTime() - previousEvent.getTime();
+		int c = 0;
+		List<Integer> keys = taskProcessingTimes.keySet().stream().filter(x -> x <= td).collect(Collectors.toList());
+		for (Integer k : keys) {
+			c += taskProcessingTimes.get(k);
+		}
+		return c;
 	}
 
 	/**

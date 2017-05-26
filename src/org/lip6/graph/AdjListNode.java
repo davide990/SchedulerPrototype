@@ -1,7 +1,6 @@
 package org.lip6.graph;
 
 import org.lip6.scheduler.ExecutableNode;
-import org.lip6.scheduler.Plan;
 
 public class AdjListNode {
 	private final ExecutableNode v;
