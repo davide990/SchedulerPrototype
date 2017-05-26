@@ -389,6 +389,10 @@ public class Scheduler {
 			NavigableSet<Event> events) {
 		int sk = getInitialStartingTime(s.getWStart(), events, t);
 
+		if (t.getID() == 2 && t.getPlanID() == 6) {
+			System.err.println();
+		}
+
 		// Start event!
 		// Event e = EventUtils.getPreviousEvent(sk, numResources, true,
 		// events).get();
@@ -474,24 +478,27 @@ public class Scheduler {
 	 * @return
 	 */
 	private static Event getPreviousEvent(final Task t, int sk, int numResources, final NavigableSet<Event> events) {
+		// Get the latest predecessor event
+		Optional<Event> taskPredecessorEvent = events.stream()
+				.filter(e -> e.taskTerminatingHere().stream().filter(c -> c.getPlanID() == t.getPlanID()).count() > 0)
+				.max(Event.getComparator());
 
 		// Get the latest event that contains a task scheduled on the same
 		// resource as the task t to be scheduled, and its time instant is less
 		// than sk
 		Optional<Event> pred = events.stream().filter(x -> x.taskTerminatingHere().stream()
 				.filter(y -> y.getResourceID() == t.getResourceID()).findFirst().isPresent() && x.getTime() < sk)
-				.max(new Comparator<Event>() {
-					@Override
-					public int compare(Event o1, Event o2) {
-						return Integer.compare(o1.getTime(), o2.getTime());
-					}
-				});
+				.max(Event.getComparator());
 
 		// If such event is not found, get the previous event to sk regardless
 		// of the resources
 		Event e = EventUtils.getPreviousEvent(sk, numResources, true, events).get();
 
+		if (taskPredecessorEvent.isPresent()) {
+			return taskPredecessorEvent.get();
+		}
 		return pred.orElse(e);
+
 	}
 
 	/**
