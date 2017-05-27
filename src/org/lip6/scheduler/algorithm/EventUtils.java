@@ -40,7 +40,8 @@ public class EventUtils {
 		}
 	}
 
-	public static Optional<Event> getPreviousEvent(int t, int numResources, boolean inclusive, NavigableSet<Event> events) {
+	public static Optional<Event> getPreviousEvent(int t, int numResources, boolean inclusive,
+			NavigableSet<Event> events) {
 		try {
 			return Optional.of(events.headSet(Event.get(t, numResources), inclusive).last());
 		} catch (NoSuchElementException ex) {

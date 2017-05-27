@@ -31,15 +31,9 @@ import org.lip6.scheduler.utils.Utils;
 
 public class Scheduler {
 
-	private static final Comparator<Plan> PLAN_COMPARATOR = new Comparator<Plan>() {
-		@Override
-		public int compare(Plan o1, Plan o2) {
-			return Float.compare(o1.getScore(), o2.getScore());
-		}
-	};
+	private Optional<SchedulerListener> listener;
 
-	public static Schedule scheduleFromFile(int maxResourceCapacity, int WStart, int WEnd, List<Criteria> criterias,
-			String filename) {
+	public static Schedule scheduleFromFile(int maxResourceCapacity, int WStart, int WEnd, String filename) {
 		Map<Integer, Plan> p = null;
 		try {
 			p = CSVParser.parse(filename);
@@ -51,13 +45,12 @@ public class Scheduler {
 		}
 
 		List<Plan> plans = new ArrayList<>(p.values());
-		Schedule s = buildSchedule(maxResourceCapacity, plans, criterias, WStart, WEnd);
+		Schedule s = buildSchedule(maxResourceCapacity, plans, WStart, WEnd);
 
 		return s;
 	}
 
-	public static Schedule schedule(int maxResourceCapacity, int WStart, int WEnd, List<Criteria> criterias,
-			InputStream is) {
+	public static Schedule schedule(int maxResourceCapacity, int WStart, int WEnd, InputStream is) {
 		Map<Integer, Plan> p = null;
 		try {
 			p = CSVParser.parse(is);
@@ -66,13 +59,12 @@ public class Scheduler {
 			return null;
 		}
 		List<Plan> plans = new ArrayList<>(p.values());
-		Schedule s = buildSchedule(maxResourceCapacity, plans, criterias, WStart, WEnd);
+		Schedule s = buildSchedule(maxResourceCapacity, plans, WStart, WEnd);
 		return s;
 	}
 
-	public static Schedule schedule(int maxResourceCapacity, int WStart, int WEnd, List<Criteria> criterias,
-			List<Plan> plans) {
-		Schedule s = buildSchedule(maxResourceCapacity, plans, criterias, WStart, WEnd);
+	public static Schedule schedule(int maxResourceCapacity, int WStart, int WEnd, List<Plan> plans) {
+		Schedule s = buildSchedule(maxResourceCapacity, plans, WStart, WEnd);
 		return s;
 	}
 
@@ -81,13 +73,11 @@ public class Scheduler {
 	 * 
 	 * @param maxResourceCapacity
 	 * @param plans
-	 * @param criterias
 	 * @param wStart
 	 * @param wEnd
 	 * @return
 	 */
-	private static Schedule buildSchedule(final int maxResourceCapacity, List<Plan> plans, List<Criteria> criterias,
-			int wStart, int wEnd) {
+	private static Schedule buildSchedule(final int maxResourceCapacity, List<Plan> plans, int wStart, int wEnd) {
 
 		// Get the number of resources employed by the set of plans
 		final int numResources = getNumberOfResources(plans);
@@ -101,8 +91,8 @@ public class Scheduler {
 		// Add the event for We
 		events.add(Event.get(wEnd, numResources));
 
-		Queue<Plan> scheduledPlans = new PriorityQueue<>(PLAN_COMPARATOR);
-		Queue<Plan> unscheduledPlans = new PriorityQueue<>(PLAN_COMPARATOR);
+		Queue<Plan> scheduledPlans = new PriorityQueue<>(Plan.PLAN_COMPARATOR);
+		Queue<Plan> unscheduledPlans = new PriorityQueue<>(Plan.PLAN_COMPARATOR);
 
 		// Sort the plans so that the precedences are respected
 		plans = sortPlansByPrecedence(plans.stream().map(x -> (ExecutableNode) x).collect(Collectors.toList()));
