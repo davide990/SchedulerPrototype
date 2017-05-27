@@ -17,7 +17,7 @@ import org.lip6.scheduler.utils.Utils;
 
 public class Schedule implements Cloneable {
 
-	private final int numResources;
+	//private final int numResources;
 	private final int WStart;
 	private final int WEnd;
 
@@ -37,8 +37,8 @@ public class Schedule implements Cloneable {
 	 */
 	private final Queue<TaskSchedule> schedule;
 
-	private Schedule(int numResources, int wStart, int wEnd) {
-		this.numResources = numResources;
+	private Schedule(int wStart, int wEnd) {
+		//this.numResources = numResources;
 		WStart = wStart;
 		WEnd = wEnd;
 		plans = new ArrayList<>();
@@ -59,11 +59,11 @@ public class Schedule implements Cloneable {
 	 * @param WEnd
 	 * @return
 	 */
-	public static Schedule get(int numResources, int WStart, int WEnd) {
+	public static Schedule get(int WStart, int WEnd) {
 		Utils.requireValidBounds(WStart, 0, Integer.MAX_VALUE, "Invalid value of WStart");
 		Utils.requireValidBounds(WEnd, WStart + 1, Integer.MAX_VALUE, "Invalid value of WEnd");
-		Utils.requireValidBounds(numResources, 1, Integer.MAX_VALUE, "Num. resource < 1");
-		return new Schedule(numResources, WStart, WEnd);
+		//Utils.requireValidBounds(numResources, 1, Integer.MAX_VALUE, "Num. resource < 1");
+		return new Schedule(WStart, WEnd);
 	}
 
 	public int getWStart() {
@@ -76,7 +76,7 @@ public class Schedule implements Cloneable {
 
 	@Override
 	public Object clone() throws CloneNotSupportedException {
-		Schedule s = Schedule.get(numResources, WStart, WEnd);
+		Schedule s = Schedule.get(WStart, WEnd);
 
 		lastTaskForResource.forEach((k, v) -> {
 			try {
@@ -197,9 +197,6 @@ public class Schedule implements Cloneable {
 		return Collections.unmodifiableList(plans);
 	}
 
-	public int resources() {
-		return numResources;
-	}
 
 	@Override
 	public String toString() {

@@ -1,9 +1,7 @@
 package org.lip6.scheduler.algorithm;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,46 +24,148 @@ import org.lip6.scheduler.Plan;
 import org.lip6.scheduler.Schedule;
 import org.lip6.scheduler.Task;
 import org.lip6.scheduler.TaskSchedule;
-import org.lip6.scheduler.utils.CSVParser;
 import org.lip6.scheduler.utils.Utils;
 
 public class Scheduler {
 
 	private Optional<SchedulerListener> listener;
+	private Set<Plan> plans;
+	private Set<Integer> resourcesIDs;
+	private Set<Plan> scheduledPlans;
+	private Set<Plan> unscheduledPlans;
+	private TreeSet<Event> events;
+	private int maxResourceCapacity;
+	private int wStart;
+	private int wEnd;
 
-	public static Schedule scheduleFromFile(int maxResourceCapacity, int WStart, int WEnd, String filename) {
-		Map<Integer, Plan> p = null;
-		try {
-			p = CSVParser.parse(filename);
-		} catch (IOException e) {
-			System.err.println("Error while loading file: \"" + filename + "\"");
-			return null;
-		} catch (ParseException e) {
-			e.printStackTrace();
-		}
-
-		List<Plan> plans = new ArrayList<>(p.values());
-		Schedule s = buildSchedule(maxResourceCapacity, plans, WStart, WEnd);
-
-		return s;
+	/**
+	 * Constructor for the Scheduler class
+	 */
+	private Scheduler() {
+		listener = Optional.empty();
+		plans = new HashSet<>();
+		scheduledPlans = new HashSet<>();
+		unscheduledPlans = new HashSet<>();
+		resourcesIDs = new HashSet<>();
+		events = new TreeSet<>(Event.getComparator());
 	}
 
-	public static Schedule schedule(int maxResourceCapacity, int WStart, int WEnd, InputStream is) {
-		Map<Integer, Plan> p = null;
-		try {
-			p = CSVParser.parse(is);
-		} catch (IOException | ParseException e) {
-			System.err.println("Error while processing input stream.\n" + e);
-			return null;
-		}
-		List<Plan> plans = new ArrayList<>(p.values());
-		Schedule s = buildSchedule(maxResourceCapacity, plans, WStart, WEnd);
-		return s;
+	/**
+	 * Static factory method for Scheduler. It returns a new instance of
+	 * Scheduler class
+	 * 
+	 * @param maxResourceCapacity
+	 *            the maximum capacity of all the resources
+	 * @param plans
+	 *            the set of plans to scheduler
+	 * @param wStart
+	 *            the starting time of the temporal window
+	 * @param wEnd
+	 *            the final time of the temporal window
+	 * @param listener
+	 *            a listener that is invoked each time a <b>feasible
+	 *            solution</b> is constructed
+	 * @return
+	 */
+	public static Scheduler get(final int maxResourceCapacity, Set<Plan> plans, int wStart, int wEnd,
+			SchedulerListener listener) {
+		Scheduler scheduler = get(maxResourceCapacity, plans, wStart, wEnd);
+		scheduler.listener = Optional.of(listener);
+		return scheduler;
 	}
 
-	public static Schedule schedule(int maxResourceCapacity, int WStart, int WEnd, List<Plan> plans) {
-		Schedule s = buildSchedule(maxResourceCapacity, plans, WStart, WEnd);
-		return s;
+	/**
+	 * Static factory method for Scheduler. It returns a new instance of
+	 * Scheduler class
+	 * 
+	 * @param maxResourceCapacity
+	 *            the maximum capacity of all the resources
+	 * @param plans
+	 *            the set of plans to scheduler
+	 * @param wStart
+	 *            the starting time of the temporal window
+	 * @param wEnd
+	 *            the final time of the temporal window
+	 * @return
+	 */
+	public static Scheduler get(final int maxResourceCapacity, Set<Plan> plans, int wStart, int wEnd) {
+		Utils.requireValidBounds(maxResourceCapacity, 1, Integer.MAX_VALUE,
+				"Maximum resource capacity must be a positive integer value.");
+
+		if (wEnd <= wStart) {
+			throw new IllegalArgumentException(
+					"Invalid temporal window [" + Integer.toString(wStart) + "," + Integer.toString(wEnd) + "]");
+		}
+
+		Scheduler scheduler = new Scheduler();
+		scheduler.maxResourceCapacity = maxResourceCapacity;
+		scheduler.wStart = wStart;
+		scheduler.wEnd = wEnd;
+		scheduler.plans.addAll(plans);
+
+		for (Plan p : plans) {
+			scheduler.resourcesIDs
+					.addAll(p.getTasks().stream().map(x -> x.getResourceID()).collect(Collectors.toList()));
+		}
+
+		scheduler.events.add(Event.get(wStart, scheduler.resourcesIDs));
+		scheduler.events.add(Event.get(wEnd, scheduler.resourcesIDs));
+
+		return scheduler;
+	}
+
+	/**
+	 * Clear the result of the current scheduler
+	 */
+	public void clear() {
+		plans.clear();
+		resourcesIDs.clear();
+		scheduledPlans.clear();
+		unscheduledPlans.clear();
+		events.clear();
+	}
+
+	public void addPlans(List<Plan> plans) {
+		this.plans.addAll(plans);
+	}
+
+	/**
+	 * Return the set of all plans assigned to this scheduler
+	 * 
+	 * @return
+	 */
+	public Set<Plan> getPlans() {
+		return Collections.unmodifiableSet(plans);
+	}
+
+	/**
+	 * Return the set of scheduled plans within the temporal window [Ws,We]
+	 * 
+	 * @return
+	 */
+	public Set<Plan> getScheduledPlans() {
+		return Collections.unmodifiableSet(scheduledPlans);
+	}
+
+	/**
+	 * Return the set of unscheduled plans within the temporal window [Ws,We]
+	 * 
+	 * @return
+	 */
+	public Set<Plan> getUnscheduledPlans() {
+		return Collections.unmodifiableSet(unscheduledPlans);
+	}
+
+	public int getMaxResourceCapacity() {
+		return maxResourceCapacity;
+	}
+
+	public int getwStart() {
+		return wStart;
+	}
+
+	public int getwEnd() {
+		return wEnd;
 	}
 
 	/**
@@ -77,25 +177,20 @@ public class Scheduler {
 	 * @param wEnd
 	 * @return
 	 */
-	private static Schedule buildSchedule(final int maxResourceCapacity, List<Plan> plans, int wStart, int wEnd) {
-
-		// Get the number of resources employed by the set of plans
-		final int numResources = getNumberOfResources(plans);
-
+	public Schedule buildSchedule() {
 		// Create the empty schedules
-		Schedule workingSolution = Schedule.get(numResources, wStart, wEnd);
-		Schedule lastFeasibleSolution = Schedule.get(numResources, wStart, wEnd);
-		TreeSet<Event> events = new TreeSet<>(Event.getComparator());
-		// Add the event for Ws
-		events.add(Event.get(wStart, numResources));
-		// Add the event for We
-		events.add(Event.get(wEnd, numResources));
+		Schedule workingSolution = Schedule.get(wStart, wEnd);
+		Schedule lastFeasibleSolution = Schedule.get(wStart, wEnd);
 
-		Queue<Plan> scheduledPlans = new PriorityQueue<>(Plan.PLAN_COMPARATOR);
-		Queue<Plan> unscheduledPlans = new PriorityQueue<>(Plan.PLAN_COMPARATOR);
+		if (plans.isEmpty()) {
+			System.err.println("Warning: No plan to schedule. Return an empty solution.");
+			return workingSolution;
+		}
+		List<Plan> plansInput = new ArrayList<>(plans);
 
 		// Sort the plans so that the precedences are respected
-		plans = sortPlansByPrecedence(plans.stream().map(x -> (ExecutableNode) x).collect(Collectors.toList()));
+		plansInput = sortPlansByPrecedence(
+				plansInput.stream().map(x -> (ExecutableNode) x).collect(Collectors.toList()));
 
 		// This map will contains the number of plans that have a specific
 		// priority value.
@@ -103,7 +198,7 @@ public class Scheduler {
 		// that have the plans that have the priority value given by the key
 		Map<Integer, Integer> prioritiesCountMap = new HashMap<>();
 
-		plans.forEach(x -> {
+		plansInput.forEach(x -> {
 			if (!prioritiesCountMap.containsKey(x.getPriority())) {
 				prioritiesCountMap.put(x.getPriority(), 1);
 			} else {
@@ -111,20 +206,20 @@ public class Scheduler {
 			}
 		});
 
-		System.err.println(
-				"sorted -> " + plans.stream().map(x -> Integer.toString(x.getID())).collect(Collectors.joining(",")));
+		System.err.println("sorted -> "
+				+ plansInput.stream().map(x -> Integer.toString(x.getID())).collect(Collectors.joining(",")));
 
 		// MAIN LOOP
-		while (!plans.isEmpty()) {
+		while (!plansInput.isEmpty()) {
 			// Get the plan with the highest priority
-			Plan pk = plans.get(0);
-			plans.remove(0);
+			Plan pk = plansInput.get(0);
+			plansInput.remove(0);
 			if (pk == null) {
 				continue;
 			}
 
 			if (prioritiesCountMap.get(pk.getPriority()) == 1) {
-				boolean scheduled = SchedulePlan(pk, workingSolution, events, maxResourceCapacity, numResources);
+				boolean scheduled = SchedulePlan(pk, workingSolution, events, maxResourceCapacity);
 				if (scheduled) {
 					scheduledPlans.add(pk);
 					try {
@@ -135,16 +230,18 @@ public class Scheduler {
 				} else {
 					unscheduledPlans.add(pk);
 				}
+				prioritiesCountMap.remove(pk.getPriority());
+
 			} else {
 				List<Plan> toSchedule = new ArrayList<>();
 				toSchedule.add(pk);
-				toSchedule.addAll(
-						plans.stream().filter(x -> x.getPriority() == pk.getPriority()).collect(Collectors.toList()));
-				plans.removeAll(toSchedule);
+				toSchedule.addAll(plansInput.stream().filter(x -> x.getPriority() == pk.getPriority())
+						.collect(Collectors.toList()));
+				plansInput.removeAll(toSchedule);
 
 				// Handle here the plans that have the same priority
 				List<Plan> unscheduled = SchedulePlansWithSamePriority(toSchedule, workingSolution, events,
-						maxResourceCapacity, numResources);
+						maxResourceCapacity);
 
 				for (Plan p : unscheduled) {
 					List<TaskSchedule> toRemove = workingSolution.taskSchedules().stream()
@@ -153,8 +250,12 @@ public class Scheduler {
 				}
 
 				toSchedule.removeAll(unscheduled);
+				unscheduled.forEach(x -> prioritiesCountMap.remove(x.getPriority()));
 				try {
 					lastFeasibleSolution = (Schedule) workingSolution.clone();
+					if (listener.isPresent()) {
+						listener.get().solutionGenerated(lastFeasibleSolution);
+					}
 				} catch (CloneNotSupportedException e) {
 					e.printStackTrace();
 				}
@@ -174,8 +275,8 @@ public class Scheduler {
 	 * @param maxResourceCapacity
 	 * @return the list of <b>unscheduled</b> plans
 	 */
-	private static List<Plan> SchedulePlansWithSamePriority(List<Plan> plans, Schedule workingSolution,
-			TreeSet<Event> events, int maxResourceCapacity, int numResources) {
+	private List<Plan> SchedulePlansWithSamePriority(List<Plan> plans, Schedule workingSolution, TreeSet<Event> events,
+			int maxResourceCapacity) {
 
 		Map<Plan, TreeSet<Event>> validPlans = new HashMap<>();
 
@@ -192,7 +293,7 @@ public class Scheduler {
 			}
 			E = EventUtils.cloneSet(events);
 			// Try to schedule the plan p
-			boolean scheduled = SchedulePlan(p, S, E, maxResourceCapacity, numResources);
+			boolean scheduled = SchedulePlan(p, S, E, maxResourceCapacity);
 
 			if (scheduled) {
 				// Keep the plan p as it generates itself a solution
@@ -235,12 +336,11 @@ public class Scheduler {
 				try {
 					S = (Schedule) workingSolution.clone();
 				} catch (CloneNotSupportedException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				E = EventUtils.cloneSet(events);
 				// Try to schedule the plan p
-				boolean scheduled = SchedulePlan(p, S, E, maxResourceCapacity, numResources);
+				boolean scheduled = SchedulePlan(p, S, E, maxResourceCapacity);
 
 				int d = getDeadTime(p, E, processingTimes);
 				System.err.println("Dead times for " + Integer.toString(p.getID()) + ": " + d);
@@ -255,7 +355,7 @@ public class Scheduler {
 
 			if (toInsert.isPresent()) {
 				System.err.println("Schedulign plan #" + toInsert.get().getID());
-				SchedulePlan(toInsert.get(), workingSolution, events, maxResourceCapacity, numResources);
+				SchedulePlan(toInsert.get(), workingSolution, events, maxResourceCapacity);
 				validPlansList.remove(toInsert.get());
 
 				for (Task t : toInsert.get().getTasks()) {
@@ -288,7 +388,7 @@ public class Scheduler {
 	 * @return the number of tasks that can be placed in the times between each
 	 *         task of <b>p</b> and their predecessors.
 	 */
-	private static int getDeadTime(final Plan p, final TreeSet<Event> events, Map<Integer, Integer> processingTimes) {
+	private int getDeadTime(final Plan p, final TreeSet<Event> events, Map<Integer, Integer> processingTimes) {
 		return p.getTasks().stream().mapToInt(t -> getTaskDeadTime(t, events, processingTimes)).sum();
 	}
 
@@ -301,7 +401,7 @@ public class Scheduler {
 	 * @param taskProcessingTimes
 	 * @return
 	 */
-	private static Integer getTaskDeadTime(final Task t, final TreeSet<Event> events,
+	private Integer getTaskDeadTime(final Task t, final TreeSet<Event> events,
 			Map<Integer, Integer> taskProcessingTimes) {
 		Optional<Event> e = events.stream().filter(x -> x.taskStartingHere().contains(t)).findFirst();
 
@@ -334,8 +434,7 @@ public class Scheduler {
 	 * @param events
 	 * @param maxResourceCapacity
 	 */
-	private static boolean SchedulePlan(Plan pk, Schedule workingSolution, TreeSet<Event> events,
-			int maxResourceCapacity, int numResources) {
+	private boolean SchedulePlan(Plan pk, Schedule workingSolution, TreeSet<Event> events, int maxResourceCapacity) {
 
 		// Loop each task t in the plan pk
 		for (Task t : pk.getTasks()) {
@@ -345,7 +444,7 @@ public class Scheduler {
 				break;
 			}
 
-			if (!scheduleTask(maxResourceCapacity, numResources, workingSolution, t, events)) {
+			if (!scheduleTask(maxResourceCapacity, workingSolution, t, events)) {
 				pk.setSchedulable(false);
 				break;
 			}
@@ -372,8 +471,7 @@ public class Scheduler {
 	 * @param events
 	 * @return
 	 */
-	private static boolean scheduleTask(final int maxResourceCapacity, final int numResources, Schedule s, Task t,
-			NavigableSet<Event> events) {
+	private boolean scheduleTask(final int maxResourceCapacity, Schedule s, Task t, NavigableSet<Event> events) {
 		int sk = getInitialStartingTime(s.getWStart(), events, t);
 
 		if (t.getID() == 2 && t.getPlanID() == 6) {
@@ -383,7 +481,7 @@ public class Scheduler {
 		// Start event!
 		// Event e = EventUtils.getPreviousEvent(sk, numResources, true,
 		// events).get();
-		Event e = getPreviousEvent(t, sk, numResources, events);
+		Event e = getPreviousEvent(t, sk, events);
 
 		Event f = e;
 		Event g = f;
@@ -429,14 +527,14 @@ public class Scheduler {
 		if (e.getTime() + t.getProcessingTime() == f.getTime()) {
 			f.addToC(t);
 		} else if (e.getTime() + t.getProcessingTime() > f.getTime()) {
-			Event newEvent = Event.get(e.getTime() + t.getProcessingTime(), s.resources());
+			Event newEvent = Event.get(e.getTime() + t.getProcessingTime(), resourcesIDs);
 			newEvent.setResourceCapacities(f.resourceCapacity());
 			f.addToC(t);
 			events.add(newEvent);
 			f = newEvent;
 		} else {
 			Event predf = EventUtils.getPreviousEvent(f, events).get();
-			Event newEvent = Event.get(e.getTime() + t.getProcessingTime(), s.resources());
+			Event newEvent = Event.get(e.getTime() + t.getProcessingTime(), resourcesIDs);
 			newEvent.setResourceCapacities(predf.resourceCapacity());
 			newEvent.addToC(t);
 			events.add(newEvent);
@@ -454,7 +552,7 @@ public class Scheduler {
 	}
 
 	/**
-	 * Get the latest event <i>e</i> that preceds <i>sk</i> and contains in
+	 * Get the latest event <i>e</i> that precedes <i>sk</i> and contains in
 	 * <i>C(e)</i> a task scheduled in the same resource as the task <i>t</i>
 	 * given in input
 	 * 
@@ -464,7 +562,7 @@ public class Scheduler {
 	 * @param events
 	 * @return
 	 */
-	private static Event getPreviousEvent(final Task t, int sk, int numResources, final NavigableSet<Event> events) {
+	private Event getPreviousEvent(final Task t, int sk, final NavigableSet<Event> events) {
 		// Get the latest predecessor event
 		Optional<Event> taskPredecessorEvent = events.stream()
 				.filter(e -> e.taskTerminatingHere().stream().filter(c -> c.getPlanID() == t.getPlanID()).count() > 0)
@@ -479,7 +577,7 @@ public class Scheduler {
 
 		// If such event is not found, get the previous event to sk regardless
 		// of the resources
-		Event e = EventUtils.getPreviousEvent(sk, numResources, true, events).get();
+		Event e = EventUtils.getPreviousEvent(sk, resourcesIDs, true, events).get();
 
 		if (taskPredecessorEvent.isPresent()) {
 			return taskPredecessorEvent.get();
@@ -496,7 +594,7 @@ public class Scheduler {
 	 * @param t
 	 * @return
 	 */
-	private static int getInitialStartingTime(int Ws, final NavigableSet<Event> events, Task t) {
+	private int getInitialStartingTime(int Ws, final NavigableSet<Event> events, Task t) {
 
 		int maxTime = t.getReleaseTime();
 		if (t.getID() == 1 && t.getPlanID() == 3) {
@@ -519,21 +617,6 @@ public class Scheduler {
 	}
 
 	/**
-	 * For the given set of plans, return the number of distinct resource
-	 * employed by the set of plans
-	 * 
-	 * @param plans
-	 * @return
-	 */
-	private static int getNumberOfResources(final List<Plan> plans) {
-		Set<Integer> res = new HashSet<>();
-		for (Plan plan : plans) {
-			res.addAll(plan.getTasks().stream().map(x -> x.getResourceID()).distinct().collect(Collectors.toList()));
-		}
-		return res.size();
-	}
-
-	/**
 	 * Calculate the topological sorting for the input set of plans or tasks.
 	 * This ensure that the precedences constraints are respected. Also, the
 	 * plans with the same priority are then sorted according to user-defined
@@ -542,7 +625,7 @@ public class Scheduler {
 	 * @param nodes
 	 * @return
 	 */
-	private static List<Plan> sortPlansByPrecedence(final List<ExecutableNode> nodes) {
+	private List<Plan> sortPlansByPrecedence(final List<ExecutableNode> nodes) {
 		List<ExecutableNode> sorted = new ArrayList<>(nodes);
 
 		// Sort topologically the nodes (left -> plan, right -> frontier)
@@ -563,7 +646,7 @@ public class Scheduler {
 	 * @param t
 	 * @param s
 	 */
-	private static boolean checkConstraints(final Task t, int startingTime, final Schedule s) {
+	private boolean checkConstraints(final Task t, int startingTime, final Schedule s) {
 		// Check for the starting time to be inside the allowed boundaries
 		try {
 			// Checks for the starting time to be inside [rk,dk]
@@ -602,7 +685,7 @@ public class Scheduler {
 	 * @return <b>true</b> if all the predecessors of t are scheduled in s,
 	 *         <b>false</b> otherwise
 	 */
-	private static boolean checkPrecedences(final Schedule s, final Task t) {
+	private boolean checkPrecedences(final Schedule s, final Task t) {
 		// From the list of the actually scheduled task, take those who are
 		// predecessors of the task t
 		List<Integer> scheduledPredecessors = s.taskSchedules().stream()

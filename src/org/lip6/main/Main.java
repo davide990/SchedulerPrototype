@@ -1,22 +1,21 @@
 package org.lip6.main;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.lip6.scheduler.Plan;
 import org.lip6.scheduler.PlanImpl;
 import org.lip6.scheduler.Schedule;
 import org.lip6.scheduler.TaskFactory;
-import org.lip6.scheduler.algorithm.Criteria;
-import org.lip6.scheduler.algorithm.Scheduler;
+import org.lip6.scheduler.algorithm.SchedulerFactory;
 
 public class Main {
 
 	public static void main(String[] args) {
 		int WStart = 2;
 		int WEnd = 15;
-		int maxResourceCapacity = 2;
-		Schedule s = Scheduler.scheduleFromFile(maxResourceCapacity, WStart, WEnd,
+		int maxResourceCapacity = 1;
+		Schedule s = SchedulerFactory.scheduleFromFile(maxResourceCapacity, WStart, WEnd,
 				"/home/davide/paper_plans_nouveau.csv");
 
 		System.out.println("Scheduling:\n" + s);
@@ -26,8 +25,7 @@ public class Main {
 		int WStart = 2;
 		int WEnd = 8;
 		int maxResourceCapacity = 1;
-		List<Plan> plans = new ArrayList<>();
-		List<Criteria> criterias = new ArrayList<>();
+		Set<Plan> plans = new HashSet<>();
 
 		PlanImpl p0 = PlanImpl.get(0, 5);
 		PlanImpl p1 = PlanImpl.get(1, 9);
@@ -52,9 +50,7 @@ public class Main {
 			System.out.println("---> " + p.getID());
 		});
 
-		Schedule s = Scheduler.schedule(maxResourceCapacity, WStart, WEnd, plans);
-		System.out.println("Scheduled plans: " + s.plans().size() + " of " + plans.size());
-
+		Schedule s = SchedulerFactory.schedule(maxResourceCapacity, WStart, WEnd, plans);
 		System.out.println("Scheduling:\n" + s);
 	}
 

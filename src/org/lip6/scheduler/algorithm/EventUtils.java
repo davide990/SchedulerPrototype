@@ -5,6 +5,7 @@ import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
@@ -40,10 +41,10 @@ public class EventUtils {
 		}
 	}
 
-	public static Optional<Event> getPreviousEvent(int t, int numResources, boolean inclusive,
+	public static Optional<Event> getPreviousEvent(int t, Set<Integer> resourcesIDs, boolean inclusive,
 			NavigableSet<Event> events) {
 		try {
-			return Optional.of(events.headSet(Event.get(t, numResources), inclusive).last());
+			return Optional.of(events.headSet(Event.get(t, resourcesIDs), inclusive).last());
 		} catch (NoSuchElementException ex) {
 			return Optional.empty();
 		}

@@ -32,14 +32,15 @@ public class Event implements Cloneable, Comparable<Event> {
 		resourceCapacity = new HashMap<>();
 	}
 
-	public static Event get(int time, int numResources) {
+	public static Event get(int time, Set<Integer> resourcesIDs) {
 		if (time < 0) {
 			throw new IllegalArgumentException("Time instant < 0");
 		}
 
 		Event e = new Event(time);
-		for (int i = 1; i <= numResources; i++) {
-			e.resourceCapacity.put(i, 0);
+		//for (int i = 1; i <= numResources; i++) {
+		for(Integer resID : resourcesIDs){
+			e.resourceCapacity.put(resID, 0);
 		}
 
 		return e;
@@ -122,7 +123,7 @@ public class Event implements Cloneable, Comparable<Event> {
 
 	@Override
 	protected Object clone() throws CloneNotSupportedException {
-		Event cloned = Event.get(getTime(), resourceCapacity.keySet().size());
+		Event cloned = Event.get(getTime(), resourceCapacity.keySet());
 		cloned.starting = new HashSet<>(starting);
 		cloned.terminating = new HashSet<>(terminating);
 		cloned.resourceCapacity = new HashMap<>(resourceCapacity);
