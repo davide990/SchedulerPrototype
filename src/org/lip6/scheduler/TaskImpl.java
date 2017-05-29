@@ -8,6 +8,7 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 
 	final int taskID;
 	final int planID;
+	final String planName;
 	final int resourceID;
 	final int releaseTime;
 	final int dueDate;
@@ -27,12 +28,27 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 		this.planPriority = planPriority;
 		this.predecessors = new ArrayList<>(predecessors);
 		this.successors = new ArrayList<>();
+		this.planName = "";
+	}
+
+	TaskImpl(int taskID, int planID, String planName, int resourceID, int releaseTime, int dueDate, int processingTime,
+			int planPriority, List<Integer> predecessors) {
+		this.taskID = taskID;
+		this.planID = planID;
+		this.resourceID = resourceID;
+		this.releaseTime = releaseTime;
+		this.dueDate = dueDate;
+		this.processingTime = processingTime;
+		this.planPriority = planPriority;
+		this.predecessors = new ArrayList<>(predecessors);
+		this.successors = new ArrayList<>();
+		this.planName = planName;
 	}
 
 	@Override
 	public Object clone() {
-		return TaskFactory.getTask(taskID, planID, resourceID, releaseTime, dueDate, processingTime, planPriority,
-				predecessors);
+		return TaskFactory.getTask(taskID, planID, planName, resourceID, releaseTime, dueDate, processingTime,
+				planPriority, predecessors);
 	}
 
 	/*
@@ -63,6 +79,16 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 	@Override
 	public int getPlanID() {
 		return planID;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see org.lip6.scheduler.Task#getPlanName()
+	 */
+	@Override
+	public String getPlanName() {
+		return planName;
 	}
 
 	/*
@@ -162,15 +188,20 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 
 	@Override
 	public String toHTMLString() {
-		return "<html><body><center><p>J<sup>" + getPlanID() + "</sup><sub style='position: relative; left: -.5em;'>"
-				+ getID() + "</sub></p></center></body></html>";
+		String sup = planName;
+		if (planName.equals("")) {
+			sup = Integer.toString(getPlanID());
+		}
+
+		return "<html><body><center><p>J<sup>" + sup + "</sup><sub style='position: relative; left: -.5em;'>" + getID()
+				+ "</sub></p></center></body></html>";
 
 	}
 
 	@Override
 	public String toHTMLString(String textColor) {
-		return "<html><body><center><p style='color:" + textColor + ";'>J<sup>" + getPlanID()
-				+ "</sup><sub style='position: relative; left: -.5em;'>" + getID()
+		return "<html><body><center><p style='color:" + textColor + ";'>J<sup style='position: relative; top: -.3em;'>"
+				+ getPlanID() + "</sup><sub style='position: relative; left: -.5em;'>" + getID()
 				+ "</sub></p></center></body></html>";
 
 	}

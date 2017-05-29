@@ -26,7 +26,7 @@ import org.lip6.scheduler.TaskFactory;
 public class CSVParser {
 
 	private enum csvHeaders {
-		taskID, planID, planPriority, resourceID, releaseTime, dueDate, processingTime, planSuccessors, taskPredecessors
+		taskID, planID, planName, planPriority, resourceID, releaseTime, dueDate, processingTime, planSuccessors, taskPredecessors
 	}
 
 	public static Map<Integer, Plan> parse(InputStream inputStream) throws IOException, ParseException {
@@ -50,6 +50,7 @@ public class CSVParser {
 		for (CSVRecord record : records) {
 			// Parse its attributes
 			int planID = Integer.parseInt(record.get("planID"));
+			String planName = record.get("planName");
 			int planPriority = Integer.parseInt(record.get("planPriority"));
 			int taskID = Integer.parseInt(record.get("taskID"));
 			int resourceID = Integer.parseInt(record.get("resourceID"));
@@ -60,10 +61,10 @@ public class CSVParser {
 			List<Integer> taskPredecessors = parsePrecedences(record.get("taskPredecessors"));
 
 			// Put the plan ID to the map if it's not already in.
-			plans.putIfAbsent(planID, PlanImpl.get(planID, planPriority, planSuccessors));
+			plans.putIfAbsent(planID, PlanImpl.get(planID, planName, planPriority, planSuccessors));
 
 			// Add the task to the plans' map
-			plans.get(planID).addTask(TaskFactory.getTask(taskID, planID, resourceID, releaseTime, dueDate,
+			plans.get(planID).addTask(TaskFactory.getTask(taskID, planID, planName, resourceID, releaseTime, dueDate,
 					processingTime, planPriority, taskPredecessors));
 		}
 

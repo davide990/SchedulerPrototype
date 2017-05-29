@@ -24,11 +24,21 @@ public class PlanImpl extends ExecutableNode implements Plan {
 	private int startTime;
 	private int endTime;
 	private float planScore;
-
-	// final Map<Integer, Task> tasks = new HashMap<>();
+	private final String planName;
 	final List<Task> tasks = new LinkedList<>();
-
 	final List<Integer> successors;
+
+	private PlanImpl(String name, int ID, int priority) {
+		this.planScore = -1;
+		this.ID = ID;
+		this.priority = priority;
+		this.executionTime = 0;
+		this.schedulable = true;
+		successors = new ArrayList<>();
+		startTime = Integer.MAX_VALUE;
+		endTime = Integer.MIN_VALUE;
+		planName = name;
+	}
 
 	private PlanImpl(int ID, int priority) {
 		this.planScore = -1;
@@ -39,6 +49,7 @@ public class PlanImpl extends ExecutableNode implements Plan {
 		successors = new ArrayList<>();
 		startTime = Integer.MAX_VALUE;
 		endTime = Integer.MIN_VALUE;
+		planName = "";
 	}
 
 	public static PlanImpl get(int ID, int priority) {
@@ -48,6 +59,17 @@ public class PlanImpl extends ExecutableNode implements Plan {
 		return new PlanImpl(ID, priority);
 	}
 
+	public static PlanImpl get(int ID, String name, int priority, List<Integer> successors) {
+		if (priority < 0) {
+			throw new IllegalArgumentException("Priority must be >= 0.");
+		}
+
+		PlanImpl p = new PlanImpl(name, ID, priority);
+		// Prevent adding duplicates
+		p.successors.addAll(successors.stream().distinct().collect(Collectors.toList()));
+		return p;
+	}
+	
 	public static PlanImpl get(int ID, int priority, List<Integer> successors) {
 		if (priority < 0) {
 			throw new IllegalArgumentException("Priority must be >= 0.");
@@ -67,6 +89,11 @@ public class PlanImpl extends ExecutableNode implements Plan {
 	@Override
 	public int getID() {
 		return ID;
+	}
+
+	@Override
+	public String getName() {
+		return planName;
 	}
 
 	@Override

@@ -18,6 +18,8 @@ public interface Plan {
 	Task getTask(int taskID);
 
 	int getID();
+	
+	String getName();
 
 	int getPriority();
 

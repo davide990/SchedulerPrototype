@@ -11,6 +11,8 @@ public interface Task {
 	int getDueDate();
 
 	int getPlanID();
+	
+	String getPlanName();
 
 	int getPlanPriority();
 

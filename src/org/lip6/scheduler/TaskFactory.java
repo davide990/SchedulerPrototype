@@ -2,7 +2,6 @@ package org.lip6.scheduler;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
 
 public class TaskFactory {
 
@@ -33,10 +32,9 @@ public class TaskFactory {
 		return new TaskImpl(taskID, planID, resourceID, releaseTime, dueDate, processingTime, planPriority,
 				predecessors);
 	}
-
-	public static TaskImpl getTask(int taskID, int planID, int resourceID, int releaseTime, int dueDate,
-			int processingTime, int planPriority, List<Integer> predecessors,
-			Function<String[], Void> executionFunction) {
+	
+	public static Task getTask(int taskID, int planID, String planName, int resourceID, int releaseTime, int dueDate, int processingTime,
+			int planPriority, List<Integer> predecessors) {
 
 		if (processingTime <= 0) {
 			throw new IllegalArgumentException("Processing time must be >= 0.");
@@ -45,8 +43,8 @@ public class TaskFactory {
 			throw new IllegalArgumentException("Release time must be > 0.");
 		}
 
-		return new TaskImpl(taskID, planID, resourceID, releaseTime, dueDate, processingTime, planPriority,
+		return new TaskImpl(taskID, planID, planName, resourceID, releaseTime, dueDate, processingTime, planPriority,
 				predecessors);
-
 	}
+
 }
