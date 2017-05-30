@@ -8,12 +8,17 @@ import java.util.Map;
 import java.util.Set;
 
 import org.lip6.scheduler.Plan;
-import org.lip6.scheduler.Schedule;
 import org.lip6.scheduler.utils.CSVParser;
 
+/**
+ * Static factory for the Scheduler class.
+ * 
+ * @author <a href="mailto:davide-andrea.guastella@lip6.fr">Davide Andrea
+ *         Guastella</a>
+ */
 public class SchedulerFactory {
 
-	public static Schedule scheduleFromFile(int maxResourceCapacity, int WStart, int WEnd, String filename) {
+	public static Scheduler getFromFile(int maxResourceCapacity, int WStart, int WEnd, String filename) {
 		Map<Integer, Plan> p = null;
 		try {
 			p = CSVParser.parse(filename);
@@ -26,12 +31,10 @@ public class SchedulerFactory {
 
 		Set<Plan> plans = new HashSet<>(p.values());
 
-		Scheduler scheduler = Scheduler.get(maxResourceCapacity, plans, WStart, WEnd);
-		Schedule s = scheduler.buildSchedule();
-		return s;
+		return Scheduler.get(maxResourceCapacity, plans, WStart, WEnd);
 	}
 
-	public static Schedule schedule(int maxResourceCapacity, int WStart, int WEnd, InputStream is) {
+	public static Scheduler get(int maxResourceCapacity, int WStart, int WEnd, InputStream is) {
 		Map<Integer, Plan> p = null;
 		try {
 			p = CSVParser.parse(is);
@@ -40,14 +43,10 @@ public class SchedulerFactory {
 			return null;
 		}
 		Set<Plan> plans = new HashSet<>(p.values());
-		Scheduler scheduler = Scheduler.get(maxResourceCapacity, plans, WStart, WEnd);
-		Schedule s = scheduler.buildSchedule();
-		return s;
+		return Scheduler.get(maxResourceCapacity, plans, WStart, WEnd);
 	}
 
-	public static Schedule schedule(int maxResourceCapacity, int WStart, int WEnd, Set<Plan> plans) {
-		Scheduler scheduler = Scheduler.get(maxResourceCapacity, plans, WStart, WEnd);
-		Schedule s = scheduler.buildSchedule();
-		return s;
+	public static Scheduler get(int maxResourceCapacity, int WStart, int WEnd, Set<Plan> plans) {
+		return Scheduler.get(maxResourceCapacity, plans, WStart, WEnd);
 	}
 }

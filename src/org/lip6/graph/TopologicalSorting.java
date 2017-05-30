@@ -161,7 +161,7 @@ public class TopologicalSorting {
 			}
 		}
 
-		//Finally, sort the plans by the their distances
+		// Finally, sort the plans by the their distances
 		return sortPlansByDistance(plans, planScores, topologicalOrder);
 	}
 

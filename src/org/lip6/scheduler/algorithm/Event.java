@@ -9,13 +9,18 @@ import java.util.stream.Collectors;
 
 import org.lip6.scheduler.Task;
 
+/**
+ * Event class
+ * 
+ * @author <a href="mailto:davide-andrea.guastella@lip6.fr">Davide Andrea
+ *         Guastella</a>
+ */
 public class Event implements Cloneable, Comparable<Event> {
-	private final int time;
-	private Set<Task> starting;
-	private Set<Task> terminating;
 
-	private Map<Integer, Integer> resourceCapacity;
-
+	/**
+	 * @return The default comparator for the {@link Event} class. The
+	 *         comparison is based on the time instant.
+	 */
 	public static Comparator<Event> getComparator() {
 		return new Comparator<Event>() {
 			@Override
@@ -25,11 +30,28 @@ public class Event implements Cloneable, Comparable<Event> {
 		};
 	}
 
+	/**
+	 * The time instant this event is related to.
+	 */
+	private final int time;
+	/**
+	 * The set of task that start exactly at {@link Event#getTime()}
+	 */
+	private Set<Task> starting;
+	/**
+	 * The set of task that terminate exactly at {@link Event#getTime()}
+	 */
+	private Set<Task> terminating;
+	/**
+	 * A map that contains the usage (value) of each resource(key).
+	 */
+	private Map<Integer, Integer> resourceUsage;
+
 	private Event(int time) {
 		this.time = time;
 		starting = new HashSet<>();
 		terminating = new HashSet<>();
-		resourceCapacity = new HashMap<>();
+		resourceUsage = new HashMap<>();
 	}
 
 	public static Event get(int time, Set<Integer> resourcesIDs) {
@@ -38,9 +60,8 @@ public class Event implements Cloneable, Comparable<Event> {
 		}
 
 		Event e = new Event(time);
-		//for (int i = 1; i <= numResources; i++) {
-		for(Integer resID : resourcesIDs){
-			e.resourceCapacity.put(resID, 0);
+		for (Integer resID : resourcesIDs) {
+			e.resourceUsage.put(resID, 0);
 		}
 
 		return e;
@@ -55,24 +76,24 @@ public class Event implements Cloneable, Comparable<Event> {
 	}
 
 	public int getResourceCapacity(int resourceID) {
-		return resourceCapacity.getOrDefault(resourceID, 0);
+		return resourceUsage.getOrDefault(resourceID, 0);
 	}
 
 	public Map<Integer, Integer> resourceCapacity() {
-		return resourceCapacity;
+		return resourceUsage;
 	}
 
 	public void increaseResourceUsage(int resourceID) {
-		resourceCapacity.put(resourceID, resourceCapacity.getOrDefault(resourceID, 0) + 1);
+		resourceUsage.put(resourceID, resourceUsage.getOrDefault(resourceID, 0) + 1);
 	}
 
 	public void setResourceCapacities(Map<Integer, Integer> capacities) {
-		resourceCapacity.clear();
-		resourceCapacity.putAll(capacities);
+		resourceUsage.clear();
+		resourceUsage.putAll(capacities);
 	}
 
 	public void setResourceCapacity(int resourceID, int value) {
-		resourceCapacity.put(resourceID, value);
+		resourceUsage.put(resourceID, value);
 	}
 
 	public void removePlan(int planID) {
@@ -95,8 +116,7 @@ public class Event implements Cloneable, Comparable<Event> {
 	@Override
 	public String toString() {
 		return "e" + time + " [S=" + starting + ", C=" + terminating + ", "
-				+ resourceCapacity.values().stream().map(x -> Integer.toString(x)).collect(Collectors.joining(","))
-				+ "]";
+				+ resourceUsage.values().stream().map(x -> Integer.toString(x)).collect(Collectors.joining(",")) + "]";
 	}
 
 	@Override
@@ -123,10 +143,10 @@ public class Event implements Cloneable, Comparable<Event> {
 
 	@Override
 	protected Object clone() throws CloneNotSupportedException {
-		Event cloned = Event.get(getTime(), resourceCapacity.keySet());
+		Event cloned = Event.get(getTime(), resourceUsage.keySet());
 		cloned.starting = new HashSet<>(starting);
 		cloned.terminating = new HashSet<>(terminating);
-		cloned.resourceCapacity = new HashMap<>(resourceCapacity);
+		cloned.resourceUsage = new HashMap<>(resourceUsage);
 		return cloned;
 	}
 

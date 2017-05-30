@@ -7,16 +7,20 @@ import org.lip6.scheduler.Plan;
 import org.lip6.scheduler.PlanImpl;
 import org.lip6.scheduler.Schedule;
 import org.lip6.scheduler.TaskFactory;
+import org.lip6.scheduler.algorithm.Scheduler;
 import org.lip6.scheduler.algorithm.SchedulerFactory;
 
 public class Main {
 
 	public static void main(String[] args) {
-		int WStart = 2;
-		int WEnd = 15;
+		int WStart = 1;
+		int WEnd = 2000;
 		int maxResourceCapacity = 1;
-		Schedule s = SchedulerFactory.scheduleFromFile(maxResourceCapacity, WStart, WEnd,
-				"/home/davide/paper_plans_nouveau.csv");
+		Scheduler sc = SchedulerFactory.getFromFile(maxResourceCapacity, WStart, WEnd,
+				"/home/davide/test_case_1.csv");
+		Schedule s = sc.buildSchedule();
+				//"/home/davide/paper_plans_nouveau.csv");
+				
 
 		System.out.println("Scheduling:\n" + s);
 	}
@@ -50,7 +54,8 @@ public class Main {
 			System.out.println("---> " + p.getID());
 		});
 
-		Schedule s = SchedulerFactory.schedule(maxResourceCapacity, WStart, WEnd, plans);
+		Scheduler sc = SchedulerFactory.get(maxResourceCapacity, WStart, WEnd, plans);
+		Schedule s = sc.buildSchedule();
 		System.out.println("Scheduling:\n" + s);
 	}
 

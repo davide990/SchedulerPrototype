@@ -11,6 +11,12 @@ import java.util.stream.Collectors;
 
 import org.lip6.scheduler.Task;
 
+/**
+ * Utility methods for the Event class
+ * 
+ * @author <a href="mailto:davide-andrea.guastella@lip6.fr">Davide Andrea
+ *         Guastella</a>
+ */
 public class EventUtils {
 
 	public static Optional<Event> getLastEventWhereTerminates(Task t, NavigableSet<Event> events) {

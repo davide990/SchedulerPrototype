@@ -178,12 +178,8 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 		return true;
 	}
 
-	/*
-	 * @Override public String toString() { return "Task [taskID=" + taskID +
-	 * ", planID=" + planID + ", processingTime=" + processingTime + "]"; }
-	 */
 	public String toString() {
-		return "(plan #" + Integer.toString(planID) + ", task #" + Integer.toString(taskID) + ")";
+		return "(Π" + Integer.toString(planID) + ", J" + Integer.toString(taskID) + ")";
 	}
 
 	@Override
