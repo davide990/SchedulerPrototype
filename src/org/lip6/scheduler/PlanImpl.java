@@ -19,7 +19,6 @@ public class PlanImpl extends ExecutableNode implements Plan {
 	private final int ID;
 	private boolean schedulable;
 	private final int priority;
-	private int inversePriority;
 	private int executionTime;
 	private int startTime;
 	private int endTime;
@@ -102,11 +101,6 @@ public class PlanImpl extends ExecutableNode implements Plan {
 	}
 
 	@Override
-	public int getInversePriority() {
-		return inversePriority;
-	}
-
-	@Override
 	public float getScore() {
 		return planScore;
 	}
@@ -114,18 +108,6 @@ public class PlanImpl extends ExecutableNode implements Plan {
 	@Override
 	public void setScore(float planScore) {
 		this.planScore = planScore;
-	}
-
-	/**
-	 * Set the inverse priority for this plan.
-	 * 
-	 * @param maxPriority
-	 *            the highest priority of the plan contained in the same set
-	 *            which contains this plan.
-	 */
-	@Override
-	public void setInversePriority(int maxPriority) {
-		inversePriority = 1 + maxPriority - getPriority();
 	}
 
 	@Override
