@@ -39,42 +39,12 @@ public class PlanImpl extends ExecutableNode implements Plan {
 		planName = name;
 	}
 
-	private PlanImpl(int ID, int priority) {
-		this.planScore = -1;
-		this.ID = ID;
-		this.priority = priority;
-		this.executionTime = 0;
-		this.schedulable = true;
-		successors = new ArrayList<>();
-		startTime = Integer.MAX_VALUE;
-		endTime = Integer.MIN_VALUE;
-		planName = "";
-	}
-
-	public static PlanImpl get(int ID, int priority) {
-		if (priority < 0) {
-			throw new IllegalArgumentException("Priority must be >= 0.");
-		}
-		return new PlanImpl(ID, priority);
-	}
-
 	public static PlanImpl get(int ID, String name, int priority, List<Integer> successors) {
 		if (priority < 0) {
 			throw new IllegalArgumentException("Priority must be >= 0.");
 		}
 
 		PlanImpl p = new PlanImpl(name, ID, priority);
-		// Prevent adding duplicates
-		p.successors.addAll(successors.stream().distinct().collect(Collectors.toList()));
-		return p;
-	}
-	
-	public static PlanImpl get(int ID, int priority, List<Integer> successors) {
-		if (priority < 0) {
-			throw new IllegalArgumentException("Priority must be >= 0.");
-		}
-
-		PlanImpl p = new PlanImpl(ID, priority);
 		// Prevent adding duplicates
 		p.successors.addAll(successors.stream().distinct().collect(Collectors.toList()));
 		return p;
@@ -163,7 +133,8 @@ public class PlanImpl extends ExecutableNode implements Plan {
 		}
 		executionTime = endTime - startTime;
 
-		sortTasks();
+		// Sort the tasks topologically
+		sortTasksTopologically();
 	}
 
 	/**
@@ -173,8 +144,7 @@ public class PlanImpl extends ExecutableNode implements Plan {
 	 * @param nodes
 	 * @return
 	 */
-
-	private void sortTasks() {
+	private void sortTasksTopologically() {
 		List<ExecutableNode> sorted = tasks.stream().map(x -> (ExecutableNode) x).collect(Collectors.toList());
 
 		// Sort topologically the nodes
@@ -193,10 +163,6 @@ public class PlanImpl extends ExecutableNode implements Plan {
 		List<Task> s = TopologicalSorting.bellmanFord(source, sorted, orderScore).stream().map(x -> (Task) x)
 				.collect(Collectors.toList());
 		Collections.reverse(s);
-
-		// System.err.println("Topological sort for plan
-		// #"+Integer.toString(ID)+"->");
-		// System.err.println(s.stream().map(x->Integer.toString(x.getID())).collect(Collectors.joining(",")));
 
 		tasks.clear();
 		for (int i = 0; i < s.size(); i++) {
@@ -233,14 +199,13 @@ public class PlanImpl extends ExecutableNode implements Plan {
 	}
 
 	@Override
-	public boolean hasSuccessor(int taskID) {
-		// TODO Auto-generated method stub
-		return false;
+	public Object clone() {
+		throw new UnsupportedOperationException("Not supported");
 	}
 
 	@Override
-	public Object clone() {
-		throw new UnsupportedOperationException("Not supported");
+	public boolean hasSuccessor(int planID) {
+		return successors.contains(planID);
 	}
 
 }

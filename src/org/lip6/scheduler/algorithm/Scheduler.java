@@ -728,7 +728,7 @@ public class Scheduler {
 		}
 	}
 
-	@Deprecated
+	@Deprecated  
 	@SuppressWarnings("unused")
 	private Event getPreviousEventOld(final Task t, int sk, final NavigableSet<Event> events) {
 		// Get the latest predecessor event

@@ -179,7 +179,7 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 	}
 
 	public String toString() {
-		return "(Π" + Integer.toString(planID) + ", J" + Integer.toString(taskID) + ")";
+		return "(Π" + Integer.toString(planID) + ",J" + Integer.toString(taskID) + ")";
 	}
 
 	@Override

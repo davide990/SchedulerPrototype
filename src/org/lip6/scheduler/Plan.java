@@ -4,6 +4,16 @@ import java.util.Collection;
 import java.util.List;
 
 public interface Plan {
+	/**
+	 * Add a task to this plan.<br/>
+	 * <br/>
+	 * 
+	 * <b>NOTE</b>: each time a task is added, all the tasks are sorted
+	 * topologically.
+	 * 
+	 * @param t
+	 *            the task to be added
+	 */
 	void addTask(Task t);
 
 	Collection<Task> getTasks();
