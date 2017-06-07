@@ -10,8 +10,6 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.PriorityQueue;
-import java.util.Queue;
 import java.util.Set;
 import java.util.Stack;
 import java.util.TreeSet;
@@ -266,7 +264,7 @@ public class Scheduler {
 	}
 
 	/**
-	 * ALGORITHM 1
+	 * <b>ALGORITHM 1</b>
 	 *
 	 * @return
 	 */
@@ -400,7 +398,11 @@ public class Scheduler {
 	}
 
 	/**
-	 * ALGORITHM 3 Schedule a set of plans that have the same priority value.
+	 * <b>ALGORITHM 3</b> Schedule a set of plans that have the same priority
+	 * value. <br/>
+	 * The plans are scheduled in order to minimize the idle time. An idle time
+	 * occurs when between the accomplishment date of a task and the starting
+	 * time of its successor, a task can be placed.
 	 * 
 	 * @param plans
 	 *            the set of plans to schedule
@@ -412,61 +414,25 @@ public class Scheduler {
 	 *            the maximum allowed resource capacity (for each resource)
 	 * @return the list of <b>unscheduled</b> plans
 	 */
-	private List<Plan> schedulePlansWithSamePriority(List<Plan> plans, Schedule workingSolution, TreeSet<Event> events,
-			int maxResourceCapacity) {
+	public List<Plan> schedulePlansWithSamePriority(final List<Plan> plans, Schedule workingSolution,
+			TreeSet<Event> events, int maxResourceCapacity) {
+		// The list of unscheduled plans.
 		List<Plan> unscheduled = new ArrayList<>();
-
-		// keep the processing time of each task
-		Map<Integer, Integer> processingTimes = new HashMap<>();
+		// At each iteration of the algorith, this var contains the value of the
+		// plans which minimize the idle time
+		Optional<Plan> bestPlan = Optional.empty();
+		Optional<Plan> toDelete = Optional.empty();
 
 		// Create a list that contains only the plans the itself are schedulable
-		Queue<Plan> validPlansList = new PriorityQueue<>(new Comparator<Plan>() {
-			@Override
-			public int compare(Plan o1, Plan o2) {
-				return Integer.compare(o1.getID(), o2.getID());
-			}
-		});
+		List<Plan> plansList = new ArrayList<>(plans);
 
-		// Generate "intermediate" solutions by scheduling each single plan into
-		// the working solution
-		for (Plan p : plans) {
-			Schedule S = null;
-			TreeSet<Event> E = null;
+		// Iterate until there is some plan left to schedule
+		while (!plansList.isEmpty()) {
+			int bestIdleTime = Integer.MAX_VALUE;
+			bestPlan = Optional.empty();
 
-			try {
-				S = (Schedule) workingSolution.clone();
-			} catch (CloneNotSupportedException e) {
-				e.printStackTrace();
-			}
-			E = EventUtils.cloneSet(events);
-			// Try to schedule the plan p
-			boolean scheduled = schedulePlan(p, S, E, maxResourceCapacity);
-
-			if (scheduled) {
-				// Keep the plan p, since it generates itself a solution
-				validPlansList.add(p);
-			}
-		}
-
-		// Calculate the processing time for each task. This information is used
-		// to calculate the idle time later
-		for (Plan p : validPlansList) {
-			for (Task t : p.getTasks()) {
-				if (processingTimes.containsKey(t.getProcessingTime())) {
-					processingTimes.put(t.getProcessingTime(), processingTimes.get(t.getProcessingTime()) + 1);
-				} else {
-					processingTimes.put(t.getProcessingTime(), 1);
-				}
-			}
-		}
-
-		// Iterate each valid plan
-		while (!validPlansList.isEmpty()) {
-			Optional<Plan> toInsert = Optional.empty();
-			Optional<Plan> toDelete = Optional.empty();
-			int bestDeadTime = Integer.MAX_VALUE;
-
-			for (Plan p : validPlansList) {
+			// Iterate each plan
+			for (Plan p : plansList) {
 				Schedule S = null;
 				TreeSet<Event> E = null;
 
@@ -479,33 +445,43 @@ public class Scheduler {
 				// Try to schedule the plan p
 				boolean scheduled = schedulePlan(p, S, E, maxResourceCapacity);
 
-				// Calculate the idle time for p
-				int d = getIdleTime(p, E, processingTimes);
-				System.err.println("idle time for plan #" + Integer.toString(p.getID()) + ": " + d);
+				// If p has been scheduler
+				if (scheduled) {
+					// For each event e that contains a task of p in S(e),
+					// calculate the difference t(e) - t(pred_e) where pred_e is
+					// the predecessor of e
+					int idleTime = 0;
+					for (Event e : E) {
+						Optional<Task> t = e.taskStartingHere().stream().filter(x -> x.getPlanID() == p.getID())
+								.findFirst();
+						Optional<Event> pred_e = EventUtils.getPreviousEvent(e, E, false);
+						if (t.isPresent() && pred_e.isPresent()) {
+							// Update the idle time value
+							idleTime += e.getTime() - pred_e.get().getTime();
+						}
+					}
 
-				// Update the best idle time
-				if (scheduled && d < bestDeadTime) {
-					toInsert = Optional.of(p);
-					bestDeadTime = d;
-					System.err.println("Best idle time: " + bestDeadTime + " for plan #" + p.getID());
+					// Update the best idle time value, that is, the minimum
+					// value.
+					if (idleTime < bestIdleTime) {
+						bestPlan = Optional.of(p);
+						bestIdleTime = idleTime;
+						System.err.println("Best idle time: " + bestIdleTime + " for plan #" + p.getID());
+					}
 				} else {
 					toDelete = Optional.of(p);
 				}
+
 			}
 
-			// If a better plan has been found, schedule it
-			if (toInsert.isPresent()) {
-				System.err.println("Schedulign plan #" + toInsert.get().getID());
-				schedulePlan(toInsert.get(), workingSolution, events, maxResourceCapacity);
-				validPlansList.remove(toInsert.get());
-
-				for (Task t : toInsert.get().getTasks()) {
-					processingTimes.replace(t.getProcessingTime(), processingTimes.get(t.getProcessingTime()) - 1);
-				}
-
+			// Schedule the plan with the minimum idle time
+			if (bestPlan.isPresent()) {
+				System.err.println("Schedulign plan #" + bestPlan.get().getID());
+				schedulePlan(bestPlan.get(), workingSolution, events, maxResourceCapacity);
+				plansList.remove(bestPlan.get());
 			} else {
 				// Otherwise, just delete it from the set of plans
-				validPlansList.remove(toDelete.get());
+				plansList.remove(toDelete.get());
 				unscheduled.add(toDelete.get());
 			}
 		}
@@ -514,61 +490,7 @@ public class Scheduler {
 	}
 
 	/**
-	 * For a given scheduled plan <b>p</b>, this method measures the idle time
-	 * between each task and its predecessor on the same resource. An idle time
-	 * occurs when between the accomplishment date of a task and the starting
-	 * time of its successor, a task can be placed.
-	 * 
-	 * @param p
-	 *            a scheduled plan
-	 * @param events
-	 *            the events list containing the tasks from <b>p</b>
-	 * @param processingTimes
-	 *            A map containing as key a processing time, and as value the
-	 *            number of tasks, from a plan set, that have the processing
-	 *            time specified as key
-	 * @return the number of tasks that can be placed in the times between each
-	 *         task of <b>p</b> and their predecessors.
-	 */
-	private int getIdleTime(final Plan p, final TreeSet<Event> events, Map<Integer, Integer> processingTimes) {
-		return p.getTasks().stream().mapToInt(t -> getTaskIdleTime(t, events, processingTimes)).sum();
-	}
-
-	/**
-	 * Calculate the idle time between the task given as parameter and its
-	 * immediate predecessor allocated in the same resource.
-	 * 
-	 * @param t
-	 * @param events
-	 * @param taskProcessingTimes
-	 * @return
-	 */
-	private Integer getTaskIdleTime(final Task t, final TreeSet<Event> events,
-			Map<Integer, Integer> taskProcessingTimes) {
-		Optional<Event> e = events.stream().filter(x -> x.taskStartingHere().contains(t)).findFirst();
-
-		if (!e.isPresent()) {
-			return 0;
-		}
-		// Find the previous event, previous to the event in which t starts,
-		// that has a task allocated to the same resource of t, OR ELSE get
-		// the previous event, that is the event corresponding to Ws time.
-		Event previousEvent = events.stream()
-				.filter(x -> x.getTime() < e.get().getTime() && x.getResourceCapacity(t.getResourceID()) > 0)
-				.max(Event.getComparator()).orElseGet(() -> EventUtils.getPreviousEvent(e.get(), events, true).get());
-
-		// calculate the size of the hole generated by task t
-		int td = e.get().getTime() - previousEvent.getTime();
-
-		// calculate the number of tasks that can be placed within the hole
-		// generated by scheduling t into the actual solution
-		int c = taskProcessingTimes.keySet().stream().filter(x -> x <= td).collect(Collectors.toList()).size();
-
-		return c;
-	}
-
-	/**
-	 * ALGORITHM 2 Schedule the plan given as input into the
+	 * <b>ALGORITHM 2</b> Schedule the plan given as input into the
 	 * 
 	 * @param pk
 	 * @param workingSolution
@@ -605,7 +527,7 @@ public class Scheduler {
 	}
 
 	/**
-	 * ALGORITHM 4 - Schedule the task t
+	 * <b>ALGORITHM 4</b> Schedule the task t
 	 * 
 	 * @param maxResourceCapacity
 	 * @param s
@@ -728,7 +650,7 @@ public class Scheduler {
 		}
 	}
 
-	@Deprecated  
+	@Deprecated
 	@SuppressWarnings("unused")
 	private Event getPreviousEventOld(final Task t, int sk, final NavigableSet<Event> events) {
 		// Get the latest predecessor event

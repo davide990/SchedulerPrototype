@@ -7,10 +7,10 @@ import org.lip6.scheduler.algorithm.SchedulerFactory;
 public class Main {
 
 	public static void main(String[] args) {
-		//String filename = "/home/davide/test_case_1.csv";
-		String filename = "/home/davide/paper_plans_nouveau.csv";
+		String filename = "/home/davide/test_case_1.csv";
+		//String filename = "/home/davide/paper_plans_nouveau.csv";
 		int WStart = 2;
-		int WEnd = 10;
+		int WEnd = 200;
 		int maxResourceCapacity = 1;
 
 		Scheduler sc = SchedulerFactory.getFromFile(maxResourceCapacity, WStart, WEnd, filename);
