@@ -572,7 +572,7 @@ public class Scheduler {
 
 			// Do the capacity test
 			int capacityAte = f.getResourceCapacity(t.getResourceID()) + 1;
-			if (capacityAte <= maxResourceCapacity && checkConstraints(t, e.getTime(), s)) {
+			if (capacityAte <= maxResourceCapacity && checkConstraints(t, e.getTime(), s.getWStart(), s.getWEnd())) {
 				mi = Math.max(0, mi - g.getTime() + f.getTime());
 				f = g;
 			} else {
@@ -583,7 +583,7 @@ public class Scheduler {
 			}
 		}
 
-		if (!checkConstraints(t, e.getTime(), s)) {
+		if (!checkConstraints(t, e.getTime(), s.getWStart(), s.getWEnd())) {
 			events.forEach(ev -> ev.removePlan(t.getPlanID()));
 			return false;
 		}
@@ -727,12 +727,12 @@ public class Scheduler {
 	}
 
 	/**
-	 * ALGORITHM 5
+	 * <b>ALGORITHM 5</b>
 	 * 
 	 * @param t
 	 * @param s
 	 */
-	private boolean checkConstraints(final Task t, int startingTime, final Schedule s) {
+	private boolean checkConstraints(final Task t, int startingTime, int Ws, int We) {
 		// Check for the starting time to be inside the allowed boundaries
 		try {
 			// Checks for the starting time to be inside [rk,dk]
@@ -742,16 +742,16 @@ public class Scheduler {
 
 			// Checks for the starting time to be inside the temporal window
 			// [Ws,We]
-			Utils.requireValidBounds(startingTime, s.getWStart(), s.getWEnd(), "for " + t.toString()
-					+ ": starting time " + startingTime + " not in window [" + s.getWStart() + "," + s.getWEnd() + "]");
+			Utils.requireValidBounds(startingTime, Ws, We, "for " + t.toString() + ": starting time " + startingTime
+					+ " not in window [" + Ws + "," + We + "]");
 
 			// Checks for the accomplishment date to be inside the temporal
 			// window [Ws,We]
-			Utils.requireValidBounds(startingTime + t.getProcessingTime(), s.getWStart(), s.getWEnd(),
+			Utils.requireValidBounds(startingTime + t.getProcessingTime(), Ws, We,
 					"for " + t.toString() + ", sk=" + Integer.toString(startingTime) + ",pk="
 							+ Integer.toString(t.getProcessingTime()) + ": accomplishment date "
-							+ Integer.toString(startingTime + t.getProcessingTime()) + " not in window ["
-							+ s.getWStart() + "," + s.getWEnd() + "]");
+							+ Integer.toString(startingTime + t.getProcessingTime()) + " not in window [" + Ws + ","
+							+ We + "]");
 		} catch (IllegalArgumentException e) {
 			System.err.println(e.getMessage());
 			return false;
