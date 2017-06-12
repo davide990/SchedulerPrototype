@@ -16,6 +16,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.lip6.graph.GraphUtils;
 import org.lip6.graph.TopologicalSorting;
 import org.lip6.scheduler.ExecutableNode;
 import org.lip6.scheduler.Plan;
@@ -284,6 +285,19 @@ public class Scheduler {
 		if (hasPrecedences) {
 			plansInput = sortPlansByPrecedence(
 					plansInput.stream().map(x -> (ExecutableNode) x).collect(Collectors.toList()));
+
+			GraphUtils.graphToDot(plansInput, "/home/davide/OUTPUT_DOT.dot");
+
+			System.err.println("Sorting plans by precedences: ");
+			System.err.println(
+					plansInput.stream().map(x -> Integer.toString(x.getID())).collect(Collectors.joining(",")));
+			
+			
+			
+			
+			//System.exit(0);
+			
+
 		} else {
 			// No precedences. Sort by priorities (decreasing)
 			plansInput.sort(new Comparator<Plan>() {
@@ -294,21 +308,25 @@ public class Scheduler {
 			});
 		}
 
-		// Create a map for the priorities.This map will contains the number of
-		// plans (as value) that have a specific
-		// priority value (ask key).
+		// Create a map containing, for each priority as key value, a list of
+		// plans having each one the priority value as key
 		Map<Integer, Integer> prioritiesCountMap = new HashMap<>();
+		Map<Integer, List<Plan>> plansWithSamePriority = new HashMap<>();
 		plansInput.forEach(x -> {
 			if (!prioritiesCountMap.containsKey(x.getPriority())) {
 				prioritiesCountMap.put(x.getPriority(), 1);
 			} else {
-				prioritiesCountMap.put(x.getPriority(), prioritiesCountMap.get(x.getPriority()) + 1);
+				int newVal = prioritiesCountMap.get(x.getPriority()) + 1;
+				prioritiesCountMap.put(x.getPriority(), newVal);
+
+				if (newVal > 1) {
+					if (!plansWithSamePriority.containsKey(x.getPriority())) {
+						plansWithSamePriority.put(x.getPriority(), new ArrayList<>());
+					}
+					plansWithSamePriority.get(x.getPriority()).add(x);
+				}
 			}
 		});
-
-		// System.err.println("sorted -> "
-		// + plansInput.stream().map(x ->
-		// Integer.toString(x.getID())).collect(Collectors.joining(",")));
 
 		// Main loop. Iterate until there is some plan left to schedule
 		while (!plansInput.isEmpty()) {
@@ -350,13 +368,11 @@ public class Scheduler {
 				// Get all the plans that have the same priority as the plan to
 				// schedule
 				List<Plan> toSchedule = new ArrayList<>();
-				toSchedule.add(pk);
-				toSchedule.addAll(plansInput.stream().filter(x -> x.getPriority() == pk.getPriority())
-						.collect(Collectors.toList()));
+				toSchedule.addAll(plansWithSamePriority.get(pk.getPriority()));
 				plansInput.removeAll(toSchedule);
 
 				// Schedule all the plans with the same priority
-				List<Plan> unscheduled = schedulePlansWithSamePriority(toSchedule, workingSolution, events,
+				List<Plan> unscheduled = schedulePlanSet(toSchedule, workingSolution, events,
 						maxResourceCapacity);
 
 				// Remove the unscheduled plans from the working solution, so
@@ -367,9 +383,10 @@ public class Scheduler {
 					workingSolution.unSchedule(toRemove);
 				}
 
-				toSchedule.removeAll(unscheduled);
+				// toSchedule.removeAll(unscheduled);
 				unscheduled.forEach(x -> prioritiesCountMap.remove(x.getPriority()));
 				unscheduledPlans.addAll(unscheduled);
+				plansWithSamePriority.remove(pk.getPriority());
 				try {
 					lastFeasibleSolution = (Schedule) workingSolution.clone();
 				} catch (CloneNotSupportedException e) {
@@ -414,11 +431,12 @@ public class Scheduler {
 	 *            the maximum allowed resource capacity (for each resource)
 	 * @return the list of <b>unscheduled</b> plans
 	 */
-	public List<Plan> schedulePlansWithSamePriority(final List<Plan> plans, Schedule workingSolution,
+	public List<Plan> schedulePlanSet(final List<Plan> plans, Schedule workingSolution,
 			TreeSet<Event> events, int maxResourceCapacity) {
 		// The list of unscheduled plans.
 		List<Plan> unscheduled = new ArrayList<>();
-		// At each iteration of the algorith, this var contains the value of the
+		// At each iteration of the algorithm, this var contains the value of
+		// the
 		// plans which minimize the idle time
 		Optional<Plan> bestPlan = Optional.empty();
 		Optional<Plan> toDelete = Optional.empty();
@@ -650,32 +668,6 @@ public class Scheduler {
 		}
 	}
 
-	@Deprecated
-	@SuppressWarnings("unused")
-	private Event getPreviousEventOld(final Task t, int sk, final NavigableSet<Event> events) {
-		// Get the latest predecessor event
-		Optional<Event> taskPredecessorEvent = events.stream()
-				.filter(e -> e.taskTerminatingHere().stream().filter(c -> c.getPlanID() == t.getPlanID()).count() > 0)
-				.max(Event.getComparator());
-
-		// Get the latest event that contains a task scheduled on the same
-		// resource as the task t to be scheduled, and its time instant is less
-		// than sk
-		Optional<Event> pred = events.stream().filter(x -> x.taskTerminatingHere().stream()
-				.filter(y -> y.getResourceID() == t.getResourceID()).findFirst().isPresent() && x.getTime() < sk)
-				.max(Event.getComparator());
-
-		// If such event is not found, get the previous event to sk regardless
-		// of the resources
-		Event e = EventUtils.getPreviousEvent(sk, resourcesIDs, true, events).get();
-
-		if (taskPredecessorEvent.isPresent()) {
-			return taskPredecessorEvent.get();
-		}
-		return pred.orElse(e);
-
-	}
-
 	/**
 	 * Calculate the initial starting time sk for a task t. It is the maximum
 	 * between Ws, rk and the latest completion time of the predecessors of t
@@ -702,6 +694,13 @@ public class Scheduler {
 		return Math.max(maxTime, Ws);
 	}
 
+	private static Comparator<Plan> PLAN_PRIORITY_COMPARATOR = new Comparator<Plan>() {
+		@Override
+		public int compare(Plan o1, Plan o2) {
+			return -Integer.compare(o1.getPriority(), o2.getPriority());
+		}
+	};
+
 	/**
 	 * Calculate the topological sorting for the input set of plans or tasks.
 	 * This ensure that the precedences constraints are respected. Also, the
@@ -712,17 +711,60 @@ public class Scheduler {
 	 * @return
 	 */
 	private List<Plan> sortPlansByPrecedence(final List<ExecutableNode> nodes) {
-		List<ExecutableNode> sorted = new ArrayList<>(nodes);
-
-		// Sort topologically the nodes (left -> plan, right -> frontier)
-		Stack<ImmutablePair<Integer, Integer>> orderScore = TopologicalSorting.getPlansFrontiers(sorted);
 		List<Plan> output = new ArrayList<>();
+		// Sort topologically the nodes (left -> plan, right -> frontier)
+		Stack<ImmutablePair<Integer, Integer>> orderScore = TopologicalSorting.getPlansFrontiers(new ArrayList<>(nodes));
+		
+		
+		System.err.println(
+				orderScore.stream().map(x -> "(" + Integer.toString(x.left) + "," + Integer.toString(x.right) + ")")
+						.collect(Collectors.joining(",")));
 
-		// Assemble the sorted list of plans
+		
+		Map<Integer,List<Plan>> sortedByFrontiers = new HashMap<>();
 		while (!orderScore.isEmpty()) {
-			int left = orderScore.pop().left;
-			output.add(nodes.stream().map(x -> (Plan) x).filter(x -> x.getID() == left).findFirst().get());
+			ImmutablePair<Integer, Integer> top = orderScore.pop();
+			if(!sortedByFrontiers.containsKey(top.right)){
+				sortedByFrontiers.put(top.right, new ArrayList<Plan>());
+			}
+			sortedByFrontiers.get(top.right).add((Plan)(nodes.stream().filter(x->x.getID()==top.left).findFirst().get()));
 		}
+		
+		for(Integer frontier : sortedByFrontiers.keySet()){
+			sortedByFrontiers.get(frontier).sort(PLAN_PRIORITY_COMPARATOR);
+			output.addAll(sortedByFrontiers.get(frontier));
+			
+			System.err.println("FRONTIER #"+Integer.toString(frontier));
+			System.err.println( sortedByFrontiers.get(frontier).stream().map(x->Integer.toString(x.getID())).collect(Collectors.joining(",")));
+		}
+		
+		
+		
+
+		/*
+		 * List<Integer> frontiers =
+		 * orderScore.stream().map(x->x.left).collect(Collectors.toList());
+		 * for(Integer frontier : frontiers){ List<Integer> ids =
+		 * orderScore.stream().filter(x->x.right==frontier).map(x->x.left).
+		 * collect(Collectors.toList()); List<Plan> plansInFrontier =
+		 * nodes.stream().filter(x->ids.contains(x.getID())).map(x->(Plan)x).
+		 * collect(Collectors.toList());
+		 * plansInFrontier.sort(PLAN_PRIORITY_COMPARATOR); }
+		 * 
+		 */
+		// QUI AGGIUNGO I PIANI IN UNA MAPPA DOVE LA CHIAVE È LA FRONTIERA E IL
+		// VALORE È UN INSIEME CONTENENTI I PIANI APPARTENENTI ALLA FRONTIERA
+		// ORDINO TUTTI I SET PER OGNI FRONTIERA
+		// AGGIUNGO I PIANI APPENA ORDINATI IN UNA FRONTIERA ALLA LISTA FINALE
+		// (PUSH)
+
+		/*
+		 * List<Plan> output = new ArrayList<>();
+		 * 
+		 * // Assemble the sorted list of plans while (!orderScore.isEmpty()) {
+		 * int left = orderScore.pop().left; output.add(nodes.stream().map(x ->
+		 * (Plan) x).filter(x -> x.getID() == left).findFirst().get()); }
+		 */
 		return output;
 	}
 
@@ -767,7 +809,7 @@ public class Scheduler {
 	 * @param s
 	 *            the solution to be checked
 	 * @param t
-	 *            the task which predecessors are to be checked
+	 *            the task which precedences are to be checked
 	 * @return <b>true</b> if all the predecessors of t are scheduled in s,
 	 *         <b>false</b> otherwise
 	 */

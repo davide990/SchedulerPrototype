@@ -15,6 +15,46 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.lip6.scheduler.ExecutableNode;
 
 public class TopologicalSorting {
+	
+	public static Stack<ImmutablePair<Integer, Integer>> bfs(final Collection<ExecutableNode> nodes)
+	{
+		
+		List<Integer> visited = new ArrayList<>();
+		
+		Stack<ImmutablePair<Integer, Integer>> frontiers = new Stack<>();
+		Stack<ImmutablePair<Integer, Integer>> out = new Stack<>();
+		
+		for (ExecutableNode p : nodes) {
+			if (nodes.stream().filter(x -> x.getSuccessors().contains(p.getID())).count() == 0) {
+				frontiers.push(new ImmutablePair<Integer, Integer>(p.getID(), 0));
+				out.push(new ImmutablePair<Integer, Integer>(p.getID(), 0));
+			}
+		}
+	
+		
+		while(!frontiers.isEmpty()){
+			ImmutablePair<Integer, Integer> last = frontiers.pop();
+			ExecutableNode v = nodes.stream().filter(x->x.getID()==last.left).findFirst().get();
+			
+			
+			if(visited.contains(v.getID())){
+				continue;
+			}
+			
+			visited.add(v.getID());
+			//frontiers.push(new ImmutablePair<Integer, Integer>(v.getID(), last.right+1));
+			for(Integer succ : v.getSuccessors()){
+				if(!visited.contains(succ)){
+					frontiers.push(new ImmutablePair<Integer, Integer>(succ, last.right+1));
+					out.push(new ImmutablePair<Integer, Integer>(succ, last.right+1));
+				}
+			}
+		}
+		
+		return out;
+	}
+	
+	
 	/**
 	 * returns a stack of pairs(A,B) where A is a plan and B the index of its
 	 * frontier. The element on the stack are sorted according to the
@@ -38,7 +78,20 @@ public class TopologicalSorting {
 		if (!root.isPresent()) {
 			throw new IllegalArgumentException("Wrong plans precedences. No valid root node found.");
 		}
-		return topologicalSort(new ArrayList<>(nodes));
+		
+		Stack<ImmutablePair<Integer, Integer>> frontiers = bfs(nodes);
+		Stack<ImmutablePair<Integer, Integer>> topologicalSorting =topologicalSort(new ArrayList<>(nodes)); 
+		
+		Stack<ImmutablePair<Integer, Integer>> out = new Stack<>();
+		
+		for(ImmutablePair<Integer, Integer> f : topologicalSorting){
+			
+			int fr = frontiers.stream().filter(x->x.left == f.left).findFirst().get().right;
+			
+			out.push(new ImmutablePair<Integer, Integer>(f.left, fr));
+		}
+return out;
+		//return topologicalSorting;
 	}
 
 	/**
@@ -52,37 +105,56 @@ public class TopologicalSorting {
 	private static Stack<ImmutablePair<Integer, Integer>> topologicalSort(final List<ExecutableNode> plans) {
 		Stack<ImmutablePair<Integer, Integer>> stack = new Stack<>();
 
-		// Mark all the vertices as not visited
-		Map<Integer, Boolean> visitedPlans = new HashMap<>();
-		for (int i = 0; i < plans.size(); i++) {
-			visitedPlans.put(plans.get(i).getID(), false);
-		}
-
+		List<Integer> visitedPlans = new ArrayList<>();
+		
+		Comparator<ImmutablePair<Integer, Integer>> cmp = new Comparator<ImmutablePair<Integer,Integer>>() {
+			
+			@Override
+			public int compare(ImmutablePair<Integer, Integer> o1, ImmutablePair<Integer, Integer> o2) {
+				return -Integer.compare(o1.right, o2.right);
+			}
+		};
+		
 		// Call the recursive helper function to store Topological Sort starting
 		// from all vertices one by one
-		int frontierStartIndex = 0;
 		for (int i = 0; i < plans.size(); i++) {
-			if (visitedPlans.get(plans.get(i).getID()) == false) {
-				topologicalSortUtil(plans.get(i), plans, visitedPlans, stack, frontierStartIndex);
+			if (visitedPlans.contains(plans.get(i).getID())) {
+				continue;
 			}
+			
+			int startIndex = 1;
+			//prendi l'indice della frontiera che contiene i predecessori di plans[i]
+			final int id = plans.get(i).getID();
+			List<Integer> pred = plans.stream().filter(x->x.getSuccessors().contains(id)).map(x->x.getID()).collect(Collectors.toList());
+			
+			Optional<ImmutablePair<Integer, Integer>> previousVisitedFrontier = stack.stream().filter(x-> pred.contains(x.left)).max(cmp);
+			
+			if(previousVisitedFrontier.isPresent()){
+				startIndex = previousVisitedFrontier.get().right;
+			}
+			
+			topologicalSortUtil(plans.get(i), plans, visitedPlans, stack, startIndex);
+			//topologicalSortUtil(plans.get(i), plans, visitedPlans, stack, frontierStartIndex);
 		}
 
 		return stack;
 	}
 
 	private static void topologicalSortUtil(ExecutableNode plan, final List<ExecutableNode> plans,
-			Map<Integer, Boolean> visited, Stack<ImmutablePair<Integer, Integer>> stack, int frontierIndex) {
+			List<Integer> visited, Stack<ImmutablePair<Integer, Integer>> stack, int frontierIndex) {
 		// Mark the current node as visited.
-		visited.put(plan.getID(), true);
-
-		frontierIndex++;
+		visited.add(plan.getID());
+		
 		for (Integer successor : plan.getSuccessors()) {
-			if (!visited.get(successor)) {
-				Optional<ExecutableNode> s = plans.stream().filter(x -> x.getID() == successor).findFirst();
-				if (s.isPresent()) {
-					topologicalSortUtil(s.get(), plans, visited, stack, frontierIndex);
-				}
+			if (visited.contains(successor)) {
+				continue;
 			}
+			Optional<ExecutableNode> s = plans.stream().filter(x -> x.getID() == successor).findFirst();
+			if (s.isPresent()) {
+				System.err.println("Entering successor plan #"+Integer.toString(s.get().getID()));
+				topologicalSortUtil(s.get(), plans, visited, stack, frontierIndex+1);
+			}
+
 		}
 		// Push current vertex to stack which stores result
 		stack.push(new ImmutablePair<Integer, Integer>(plan.getID(), frontierIndex));
@@ -106,22 +178,22 @@ public class TopologicalSorting {
 
 		// dist -> distances entre le noeud s et tous les autre noeuds
 		Map<Integer, Integer> dist = new HashMap<>();
-		Map<Integer, Boolean> visited = new HashMap<>();
+		List<Integer> visited = new ArrayList<>();
 		List<Integer> planIDs = plans.stream().map(x -> x.getID()).collect(Collectors.toList());
 
 		for (Integer i : planIDs) {
-			visited.put(i, false);
+			visited.add(i);
 			predecessorMap.put(i, -1);
 		}
 
 		// Call the recursive helper function to store Topological
 		// Sort starting from all vertices one by one
 		for (Integer i : planIDs) {
-			if (visited.get(i) == false) {
+			if (!visited.contains(i)) {
 
 				Optional<ExecutableNode> p = plans.stream().filter(x -> x.getID() == i).findFirst();
 				if (p.isPresent()) {
-					topologicalSortUtil(p.get(), plans, visited, stack, frontierIndex);
+					 topologicalSortUtil(p.get(), plans, visited, stack, frontierIndex);
 				}
 			}
 		}
