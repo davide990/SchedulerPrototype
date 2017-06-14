@@ -1,5 +1,14 @@
 package org.lip6.scheduler;
 
+/**
+ * A TaskSchedule represents the assignment of a starting time s<sub>k</sub> to
+ * a task. <br/>
+ * The task and the resource are used to render correctly the solution in the
+ * web interface.
+ * 
+ * @author davide
+ *
+ */
 public class TaskSchedule implements Cloneable {
 	private final Task task;
 	private final int startingTime;

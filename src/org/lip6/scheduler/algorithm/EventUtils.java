@@ -19,6 +19,13 @@ import org.lip6.scheduler.Task;
  */
 public class EventUtils {
 
+	/**
+	 * Get the latest event e which contains t in C(e).
+	 * 
+	 * @param t
+	 * @param events
+	 * @return
+	 */
 	public static Optional<Event> getLastEventWhereTerminates(Task t, NavigableSet<Event> events) {
 
 		List<Event> vv = events.stream().filter(x -> x.taskTerminatingHere().contains(t)).collect(Collectors.toList());
@@ -30,10 +37,24 @@ public class EventUtils {
 		return Optional.empty();
 	}
 
+	/**
+	 * Get all the events which time instant t(e) is greater than t
+	 * 
+	 * @param t
+	 * @param events
+	 * @return
+	 */
 	public List<Event> executedAfter(int t, NavigableSet<Event> events) {
 		return events.stream().filter(x -> x.getTime() > t).collect(Collectors.toList());
 	}
 
+	/**
+	 * Get the last
+	 * 
+	 * @param We
+	 * @param events
+	 * @return
+	 */
 	public static Optional<Event> getLastEvent(int We, NavigableSet<Event> events) {
 		return events.stream().filter(x -> x.getTime() == We).findFirst();
 	}
@@ -74,7 +95,6 @@ public class EventUtils {
 			try {
 				E.add((Event) x.clone());
 			} catch (CloneNotSupportedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}

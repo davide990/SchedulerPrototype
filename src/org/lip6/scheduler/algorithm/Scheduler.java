@@ -67,10 +67,7 @@ public class Scheduler {
 	 * The start time instant of the temporal window
 	 */
 	private int wEnd;
-	/**
-	 * If true, plans are linked by precedence relations.
-	 */
-	private boolean hasPrecedences;
+
 	/**
 	 * If true, the optimal We for the scheduling is calculated. This is useful
 	 * when the user doesn't know which value of We to choose.
@@ -87,7 +84,6 @@ public class Scheduler {
 		unscheduledPlans = new HashSet<>();
 		resourcesIDs = new HashSet<>();
 		events = new TreeSet<>(Event.getComparator());
-		hasPrecedences = true;
 		calculateOptimalWe = false;
 	}
 
@@ -113,14 +109,6 @@ public class Scheduler {
 		Scheduler scheduler = get(maxResourceCapacity, plans, wStart, wEnd);
 		scheduler.listener = Optional.of(listener);
 		return scheduler;
-	}
-
-	public boolean hasPrecedences() {
-		return hasPrecedences;
-	}
-
-	public void setHasPrecedences(boolean hasPrecedences) {
-		this.hasPrecedences = hasPrecedences;
 	}
 
 	public boolean isCalculateOptimalWe() {
@@ -281,35 +269,15 @@ public class Scheduler {
 		// Create a copy of the set of plans to schedule
 		List<Plan> plansInput = new ArrayList<>(plans);
 
-		// Sort the plans so that the precedences are respected (if any)
-		if (hasPrecedences) {
-			plansInput = sortPlansByPrecedence(
-					plansInput.stream().map(x -> (ExecutableNode) x).collect(Collectors.toList()));
-
-			GraphUtils.graphToDot(plansInput, "/home/davide/OUTPUT_DOT.dot");
-
-			System.err.println("Sorting plans by precedences: ");
-			System.err.println(
-					plansInput.stream().map(x -> Integer.toString(x.getID())).collect(Collectors.joining(",")));
-			
-			
-			
-			
-			//System.exit(0);
-			
-
-		} else {
-			// No precedences. Sort by priorities (decreasing)
-			plansInput.sort(new Comparator<Plan>() {
-				@Override
-				public int compare(Plan o1, Plan o2) {
-					return -Integer.compare(o1.getPriority(), o2.getPriority());
-				}
-			});
-		}
-
+		// Sort the plans according to the precedences (if any), and also
+		// according to their priority value
+		plansInput = sortPlans(plansInput.stream().map(x -> (ExecutableNode) x).collect(Collectors.toList()));
+		
+		GraphUtils.graphToDot(plansInput, "/home/davide/OUTPUT_DOT.dot");
+		
 		// Create a map containing, for each priority as key value, a list of
-		// plans having each one the priority value as key
+		// plans having each one the priority value as key. This is used later
+		// to schedule plans that have the same priority value.
 		Map<Integer, Integer> prioritiesCountMap = new HashMap<>();
 		Map<Integer, List<Plan>> plansWithSamePriority = new HashMap<>();
 		plansInput.forEach(x -> {
@@ -330,7 +298,7 @@ public class Scheduler {
 
 		// Main loop. Iterate until there is some plan left to schedule
 		while (!plansInput.isEmpty()) {
-			// Get the plan with the highest priority
+			// Get the next plan to sort
 			Plan pk = plansInput.get(0);
 			plansInput.remove(0);
 			if (pk == null) {
@@ -372,8 +340,7 @@ public class Scheduler {
 				plansInput.removeAll(toSchedule);
 
 				// Schedule all the plans with the same priority
-				List<Plan> unscheduled = schedulePlanSet(toSchedule, workingSolution, events,
-						maxResourceCapacity);
+				List<Plan> unscheduled = schedulePlanSet(toSchedule, workingSolution, events, maxResourceCapacity);
 
 				// Remove the unscheduled plans from the working solution, so
 				// that is contains only the successfully scheduled plans
@@ -383,7 +350,6 @@ public class Scheduler {
 					workingSolution.unSchedule(toRemove);
 				}
 
-				// toSchedule.removeAll(unscheduled);
 				unscheduled.forEach(x -> prioritiesCountMap.remove(x.getPriority()));
 				unscheduledPlans.addAll(unscheduled);
 				plansWithSamePriority.remove(pk.getPriority());
@@ -431,13 +397,12 @@ public class Scheduler {
 	 *            the maximum allowed resource capacity (for each resource)
 	 * @return the list of <b>unscheduled</b> plans
 	 */
-	public List<Plan> schedulePlanSet(final List<Plan> plans, Schedule workingSolution,
-			TreeSet<Event> events, int maxResourceCapacity) {
+	public List<Plan> schedulePlanSet(final List<Plan> plans, Schedule workingSolution, TreeSet<Event> events,
+			int maxResourceCapacity) {
 		// The list of unscheduled plans.
 		List<Plan> unscheduled = new ArrayList<>();
 		// At each iteration of the algorithm, this var contains the value of
-		// the
-		// plans which minimize the idle time
+		// the plans which minimize the idle time
 		Optional<Plan> bestPlan = Optional.empty();
 		Optional<Plan> toDelete = Optional.empty();
 
@@ -643,9 +608,9 @@ public class Scheduler {
 	}
 
 	/**
-	 * Get the latest event <i>e</i> that precedes <i>sk</i> and contains in
-	 * <i>C(e)</i> a task scheduled in the same resource as the task <i>t</i>
-	 * given in input
+	 * Get the latest event <i>e</i> that precedes <i>s<sub>k</sub></i> and
+	 * contains in <i>C(e)</i> a task scheduled in the same resource as the task
+	 * <i>t</i> given in input
 	 * 
 	 * @param t
 	 * @param sk
@@ -702,69 +667,42 @@ public class Scheduler {
 	};
 
 	/**
-	 * Calculate the topological sorting for the input set of plans or tasks.
-	 * This ensure that the precedences constraints are respected. Also, the
-	 * plans with the same priority are then sorted according to user-defined
-	 * criteria
+	 * <b>ALGORITHM 5</b> Sort plans according to their topological order and
+	 * then according to their priority value
 	 * 
-	 * @param nodes
-	 * @return
+	 * @param plans
+	 *            the set of plans to sort.
+	 * @return the sorted set of plans
 	 */
-	private List<Plan> sortPlansByPrecedence(final List<ExecutableNode> nodes) {
+	private List<Plan> sortPlans(final List<ExecutableNode> plans) {
 		List<Plan> output = new ArrayList<>();
-		// Sort topologically the nodes (left -> plan, right -> frontier)
-		Stack<ImmutablePair<Integer, Integer>> orderScore = TopologicalSorting.getPlansFrontiers(new ArrayList<>(nodes));
-		
-		
-		System.err.println(
-				orderScore.stream().map(x -> "(" + Integer.toString(x.left) + "," + Integer.toString(x.right) + ")")
-						.collect(Collectors.joining(",")));
+		// Sort topologically the nodes. Each pair is: (left: plan ID, right:
+		// frontier which the plan belongs to into the precedences graph)
+		Stack<ImmutablePair<Integer, Integer>> topologicallySortedPlans = TopologicalSorting
+				.topologicalSort(new ArrayList<>(plans));
 
-		
-		Map<Integer,List<Plan>> sortedByFrontiers = new HashMap<>();
-		while (!orderScore.isEmpty()) {
-			ImmutablePair<Integer, Integer> top = orderScore.pop();
-			if(!sortedByFrontiers.containsKey(top.right)){
+		// Assemble the plans in a map where the key is the value of a frontier
+		// in the precedence graph,
+		// and the value is a list of plans which belongs to that frontier. The
+		// plans in each list keeps the topological sort
+		Map<Integer, List<Plan>> sortedByFrontiers = new HashMap<>();
+		while (!topologicallySortedPlans.isEmpty()) {
+			ImmutablePair<Integer, Integer> top = topologicallySortedPlans.pop();
+			if (!sortedByFrontiers.containsKey(top.right)) {
 				sortedByFrontiers.put(top.right, new ArrayList<Plan>());
 			}
-			sortedByFrontiers.get(top.right).add((Plan)(nodes.stream().filter(x->x.getID()==top.left).findFirst().get()));
+			sortedByFrontiers.get(top.right)
+					.add((Plan) (plans.stream().filter(x -> x.getID() == top.left).findFirst().get()));
 		}
-		
-		for(Integer frontier : sortedByFrontiers.keySet()){
+
+		// If there is a frontier which has more than one plan, the order in
+		// which they are scheduled doesn't matter. In this case, sort them by
+		// taking into account the priority value of each plan
+		for (Integer frontier : sortedByFrontiers.keySet()) {
 			sortedByFrontiers.get(frontier).sort(PLAN_PRIORITY_COMPARATOR);
 			output.addAll(sortedByFrontiers.get(frontier));
-			
-			System.err.println("FRONTIER #"+Integer.toString(frontier));
-			System.err.println( sortedByFrontiers.get(frontier).stream().map(x->Integer.toString(x.getID())).collect(Collectors.joining(",")));
 		}
 		
-		
-		
-
-		/*
-		 * List<Integer> frontiers =
-		 * orderScore.stream().map(x->x.left).collect(Collectors.toList());
-		 * for(Integer frontier : frontiers){ List<Integer> ids =
-		 * orderScore.stream().filter(x->x.right==frontier).map(x->x.left).
-		 * collect(Collectors.toList()); List<Plan> plansInFrontier =
-		 * nodes.stream().filter(x->ids.contains(x.getID())).map(x->(Plan)x).
-		 * collect(Collectors.toList());
-		 * plansInFrontier.sort(PLAN_PRIORITY_COMPARATOR); }
-		 * 
-		 */
-		// QUI AGGIUNGO I PIANI IN UNA MAPPA DOVE LA CHIAVE È LA FRONTIERA E IL
-		// VALORE È UN INSIEME CONTENENTI I PIANI APPARTENENTI ALLA FRONTIERA
-		// ORDINO TUTTI I SET PER OGNI FRONTIERA
-		// AGGIUNGO I PIANI APPENA ORDINATI IN UNA FRONTIERA ALLA LISTA FINALE
-		// (PUSH)
-
-		/*
-		 * List<Plan> output = new ArrayList<>();
-		 * 
-		 * // Assemble the sorted list of plans while (!orderScore.isEmpty()) {
-		 * int left = orderScore.pop().left; output.add(nodes.stream().map(x ->
-		 * (Plan) x).filter(x -> x.getID() == left).findFirst().get()); }
-		 */
 		return output;
 	}
 

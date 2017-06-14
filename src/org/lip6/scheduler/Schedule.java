@@ -15,9 +15,16 @@ import java.util.stream.Collectors;
 
 import org.lip6.scheduler.utils.Utils;
 
+/**
+ * A schedule represents a solution for the scheduling problem.
+ * 
+ * 
+ * @author davide
+ *
+ */
 public class Schedule implements Cloneable {
 
-	//private final int numResources;
+	// private final int numResources;
 	private final int WStart;
 	private final int WEnd;
 
@@ -33,12 +40,15 @@ public class Schedule implements Cloneable {
 
 	/**
 	 * The set of task schedules. These are ordered according to the starting
-	 * times of the schedules.
+	 * times.<br/>
+	 * Recall that each TaskSchedule actually represents a starting time for a
+	 * scheduled task, together with other useful informations used, for
+	 * example, for rendering tasks in the web interface.
 	 */
 	private final Queue<TaskSchedule> schedule;
 
 	private Schedule(int wStart, int wEnd) {
-		//this.numResources = numResources;
+		// this.numResources = numResources;
 		WStart = wStart;
 		WEnd = wEnd;
 		plans = new ArrayList<>();
@@ -52,7 +62,7 @@ public class Schedule implements Cloneable {
 	}
 
 	/**
-	 * Get an istance of Schedule
+	 * Get an instance of Schedule
 	 * 
 	 * @param numResources
 	 * @param WStart
@@ -62,7 +72,6 @@ public class Schedule implements Cloneable {
 	public static Schedule get(int WStart, int WEnd) {
 		Utils.requireValidBounds(WStart, 0, Integer.MAX_VALUE, "Invalid value of WStart");
 		Utils.requireValidBounds(WEnd, WStart + 1, Integer.MAX_VALUE, "Invalid value of WEnd");
-		//Utils.requireValidBounds(numResources, 1, Integer.MAX_VALUE, "Num. resource < 1");
 		return new Schedule(WStart, WEnd);
 	}
 
@@ -196,7 +205,6 @@ public class Schedule implements Cloneable {
 	public List<Integer> plans() {
 		return Collections.unmodifiableList(plans);
 	}
-
 
 	@Override
 	public String toString() {

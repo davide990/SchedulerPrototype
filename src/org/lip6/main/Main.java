@@ -1,5 +1,6 @@
 package org.lip6.main;
 
+import org.lip6.graph.GraphUtils;
 import org.lip6.scheduler.Schedule;
 import org.lip6.scheduler.algorithm.Scheduler;
 import org.lip6.scheduler.algorithm.SchedulerFactory;
@@ -14,6 +15,10 @@ public class Main {
 		int maxResourceCapacity = 1;
 
 		Scheduler sc = SchedulerFactory.getFromFile(maxResourceCapacity, WStart, WEnd, filename);
+		
+		
+		//GraphUtils.graphToDot(sc.getPlans(), "/home/davide/OUTPUT_DOT.dot");
+		
 		Schedule s = sc.buildSchedule();
 		System.out.println("Scheduling:\n" + s);
 		

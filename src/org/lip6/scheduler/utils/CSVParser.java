@@ -89,7 +89,7 @@ public class CSVParser {
 	}
 
 	/**
-	 * Parse a predecessors string, that is, a list of numbers separater by ';'
+	 * Parse a predecessors string, that is, a list of numbers separated by ';'
 	 * 
 	 * @param precedences
 	 * @return
