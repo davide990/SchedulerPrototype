@@ -3,6 +3,9 @@ package org.lip6.scheduler;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.BiFunction;
 
 public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 
@@ -12,7 +15,10 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 	final int resourceID;
 	final int releaseTime;
 	final int dueDate;
-	final int processingTime;
+
+	// PROCESSING TIME NOT FINAL!
+	int processingTime;
+
 	final int planPriority;
 	final List<Integer> predecessors;
 	final List<Integer> successors;
@@ -29,6 +35,7 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 		this.predecessors = new ArrayList<>(predecessors);
 		this.successors = new ArrayList<>();
 		this.planName = "";
+		processingTimeFunction = Optional.empty();
 	}
 
 	TaskImpl(int taskID, int planID, String planName, int resourceID, int releaseTime, int dueDate, int processingTime,
@@ -43,6 +50,7 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 		this.predecessors = new ArrayList<>(predecessors);
 		this.successors = new ArrayList<>();
 		this.planName = planName;
+		processingTimeFunction = Optional.empty();
 	}
 
 	@Override
@@ -153,6 +161,22 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 		return planPriority;
 	}
 
+	Optional<BiFunction<Integer, Integer, Integer>> processingTimeFunction;
+
+	@Override
+	public void setProcessingTimeFunction(BiFunction<Integer, Integer, Integer> func) {
+		Objects.requireNonNull(func);
+		processingTimeFunction = Optional.of(func);
+	}
+
+	@Override
+	public void updateProcessingTime(int currentTimeInstant) {
+		if (!processingTimeFunction.isPresent()) {
+			return;
+		}
+		processingTime = processingTimeFunction.get().apply(currentTimeInstant, processingTime);
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -184,14 +208,22 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 
 	@Override
 	public String toHTMLString() {
-		String sup = planName;
-		if (planName.equals("")) {
-			sup = Integer.toString(getPlanID());
+		return toHTMLString(true);
+	}
+
+	@Override
+	public String toHTMLString(boolean printPlanName) {
+		if (printPlanName) {
+			String sup = planName;
+			if (planName.equals("")) {
+				sup = Integer.toString(getPlanID());
+				return "<html><body><center><p>J<sup>" + sup + "</sup><sub style='position: relative; left: -.5em;'>"
+						+ getID() + "</sub></p></center></body></html>";
+			}
 		}
 
-		return "<html><body><center><p>J<sup>" + sup + "</sup><sub style='position: relative; left: -.5em;'>" + getID()
-				+ "</sub></p></center></body></html>";
-
+		return "<html><body><center><p>J<sup>" + getPlanID() + "</sup><sub style='position: relative; left: -.5em;'>"
+				+ getID();
 	}
 
 	@Override

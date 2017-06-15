@@ -6,6 +6,7 @@ import java.text.ParseException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
 
 import org.lip6.scheduler.Plan;
 import org.lip6.scheduler.utils.CSVParser;
@@ -43,6 +44,21 @@ public class SchedulerFactory {
 			return null;
 		}
 		Set<Plan> plans = new HashSet<>(p.values());
+
+		
+		
+		//!!!!!!!!!!!
+		plans.forEach(x -> {
+			x.getTasks().forEach(t -> {
+				t.setProcessingTimeFunction(new BiFunction<Integer, Integer, Integer>() {
+					@Override
+					public Integer apply(Integer currentTimeInstant, Integer processingTime) {
+						return Math.max(0, processingTime - 1);
+					}
+				});
+			});
+		});
+
 		return Scheduler.get(maxResourceCapacity, plans, WStart, WEnd);
 	}
 

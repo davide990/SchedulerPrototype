@@ -192,7 +192,7 @@ public class Scheduler {
 	}
 
 	/**
-	 * Return the set of scheduled plans within the temporal window [Ws,We]
+	 * 2 Return the set of scheduled plans within the temporal window [Ws,We]
 	 * 
 	 * @return
 	 */
@@ -272,9 +272,9 @@ public class Scheduler {
 		// Sort the plans according to the precedences (if any), and also
 		// according to their priority value
 		plansInput = sortPlans(plansInput.stream().map(x -> (ExecutableNode) x).collect(Collectors.toList()));
-		
+
 		GraphUtils.graphToDot(plansInput, "/home/davide/OUTPUT_DOT.dot");
-		
+
 		// Create a map containing, for each priority as key value, a list of
 		// plans having each one the priority value as key. This is used later
 		// to schedule plans that have the same priority value.
@@ -304,6 +304,8 @@ public class Scheduler {
 			if (pk == null) {
 				continue;
 			}
+
+			System.err.println("Scheduling plan #" + Integer.toString(pk.getID()));
 
 			// If pk is the only, in the plan set, to have its priority value,
 			// then proceed by scheduling it
@@ -377,6 +379,7 @@ public class Scheduler {
 		}
 
 		events.forEach(x -> System.err.println(x));
+
 		return lastFeasibleSolution;
 	}
 
@@ -428,7 +431,7 @@ public class Scheduler {
 				// Try to schedule the plan p
 				boolean scheduled = schedulePlan(p, S, E, maxResourceCapacity);
 
-				// If p has been scheduler
+				// If p has been scheduled
 				if (scheduled) {
 					// For each event e that contains a task of p in S(e),
 					// calculate the difference t(e) - t(pred_e) where pred_e is
@@ -459,11 +462,11 @@ public class Scheduler {
 
 			// Schedule the plan with the minimum idle time
 			if (bestPlan.isPresent()) {
-				System.err.println("Schedulign plan #" + bestPlan.get().getID());
 				schedulePlan(bestPlan.get(), workingSolution, events, maxResourceCapacity);
 				plansList.remove(bestPlan.get());
 			} else {
 				// Otherwise, just delete it from the set of plans
+
 				plansList.remove(toDelete.get());
 				unscheduled.add(toDelete.get());
 			}
@@ -675,7 +678,7 @@ public class Scheduler {
 	 * @return the sorted set of plans
 	 */
 	private List<Plan> sortPlans(final List<ExecutableNode> plans) {
-		List<Plan> output = new ArrayList<>();
+		List<Plan> sortedPlanList = new ArrayList<>();
 		// Sort topologically the nodes. Each pair is: (left: plan ID, right:
 		// frontier which the plan belongs to into the precedences graph)
 		Stack<ImmutablePair<Integer, Integer>> topologicallySortedPlans = TopologicalSorting
@@ -700,10 +703,10 @@ public class Scheduler {
 		// taking into account the priority value of each plan
 		for (Integer frontier : sortedByFrontiers.keySet()) {
 			sortedByFrontiers.get(frontier).sort(PLAN_PRIORITY_COMPARATOR);
-			output.addAll(sortedByFrontiers.get(frontier));
+			sortedPlanList.addAll(sortedByFrontiers.get(frontier));
 		}
-		
-		return output;
+
+		return sortedPlanList;
 	}
 
 	/**

@@ -103,7 +103,7 @@ public class Schedule implements Cloneable {
 			}
 		});
 
-		s.plans.addAll(plans);
+		s.plans.addAll(new ArrayList<>(plans));
 		return s;
 	}
 
@@ -132,31 +132,24 @@ public class Schedule implements Cloneable {
 	 * @param startingTime
 	 * @param t
 	 */
-	public void addTask(int startingTime, Task task) {
+	public void addTask(int startingTime, final Task task) {
 		Objects.requireNonNull(task, "Task cannot be null");
-
-		if (!(task instanceof Task)) {
-			throw new IllegalArgumentException("Argument is not a task");
-		}
-
-		Task t = (Task) task;
 
 		if (startingTime <= 0) {
 			throw new IllegalArgumentException("Starting time can not be <= 0");
 		}
-
 		// Create a new task assignment for task t at starting time startingTime
-		TaskSchedule s = new TaskSchedule(task, startingTime, t.getResourceID());
+		TaskSchedule s = new TaskSchedule(task, startingTime, task.getResourceID());
 		schedule.add(s);
 
 		// Keep the ID of the plan which contains t
-		if (!plans.contains(t.getPlanID())) {
-			plans.add(t.getPlanID());
+		if (!plans.contains(task.getPlanID())) {
+			plans.add(task.getPlanID());
 		}
 
 		// Keep the task t as the last task assigned for the resource at which
 		// it refers.
-		lastTaskForResource.put(t.getResourceID(), s);
+		lastTaskForResource.put(task.getResourceID(), s);
 	}
 
 	/**
