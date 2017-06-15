@@ -1,6 +1,7 @@
 package org.lip6.scheduler.algorithm;
 
 import java.util.ArrayList;
+
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -10,6 +11,7 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.Stack;
 import java.util.TreeSet;
@@ -192,7 +194,8 @@ public class Scheduler {
 	}
 
 	/**
-	 * 2 Return the set of scheduled plans within the temporal window [W<sub>s</sub>,W<sub>e</sub>]
+	 * 2 Return the set of scheduled plans within the temporal window
+	 * [W<sub>s</sub>,W<sub>e</sub>]
 	 * 
 	 * @return
 	 */
@@ -201,7 +204,8 @@ public class Scheduler {
 	}
 
 	/**
-	 * Return the set of unscheduled plans within the temporal window [W<sub>s</sub>,W<sub>e</sub>]
+	 * Return the set of unscheduled plans within the temporal window
+	 * [W<sub>s</sub>,W<sub>e</sub>]
 	 * 
 	 * @return
 	 */
@@ -263,7 +267,8 @@ public class Scheduler {
 		Schedule lastFeasibleSolution = Schedule.get(wStart, wEnd);
 
 		if (plans.isEmpty()) {
-			System.err.println("Warning: No plan to schedule. Return an empty solution.");
+			// System.err.println("Warning: No plan to schedule. Return an empty
+			// solution.");
 			return workingSolution;
 		}
 		// Create a copy of the set of plans to schedule
@@ -305,7 +310,8 @@ public class Scheduler {
 				continue;
 			}
 
-			System.err.println("Scheduling plan #" + Integer.toString(pk.getID()));
+			// System.err.println("Scheduling plan #" +
+			// Integer.toString(pk.getID()));
 
 			// If pk is the only, in the plan set, to have its priority value,
 			// then proceed by scheduling it
@@ -378,7 +384,7 @@ public class Scheduler {
 			}
 		}
 
-		events.forEach(x -> System.err.println(x));
+		// events.forEach(x -> System.err.println(x));
 
 		return lastFeasibleSolution;
 	}
@@ -452,7 +458,8 @@ public class Scheduler {
 					if (idleTime < bestIdleTime) {
 						bestPlan = Optional.of(p);
 						bestIdleTime = idleTime;
-						System.err.println("Best idle time: " + bestIdleTime + " for plan #" + p.getID());
+						// System.err.println("Best idle time: " + bestIdleTime
+						// + " for plan #" + p.getID());
 					}
 				} else {
 					toDelete = Optional.of(p);
@@ -513,6 +520,120 @@ public class Scheduler {
 	}
 
 	/**
+	 * 
+	 * @param maxResourceCapacity
+	 * @param s
+	 * @param t
+	 * @param events
+	 * @return
+	 */
+	private boolean scheduleSyncTasks(final int maxResourceCapacity, Schedule s, List<Task> t,
+			NavigableSet<Event> events) {
+		int sk = t.stream().mapToInt(x -> getInitialStartingTime(s.getWStart(), events, x)).min().getAsInt();
+		Event e = getPreviousEvent(sk, events);
+		if (!events.contains(e)) {
+			events.add(e);
+		}
+
+		Event f = e;
+		Event g = f;
+
+		Map<Integer, Integer> miMap = new HashMap<>();
+		Map<Integer, Event> fMap = new HashMap<>();
+		t.forEach(x -> miMap.putIfAbsent(x.getID(), x.getProcessingTime()));
+
+		// int mi = t.getProcessingTime();
+
+		final Event lastEvent;
+		try {
+			lastEvent = EventUtils.getLastEvent(s.getWEnd(), events).get();
+		} catch (NoSuchElementException ex) {
+			// System.err.println("Error: no final event found.");
+			return false;
+		}
+
+		boolean miCondition = true;
+		while (miCondition && !f.equals(lastEvent)) {
+			if (EventUtils.getNextEvent(f, events).isPresent()) {
+				g = EventUtils.getNextEvent(f, events).get();
+			} else {
+				g = lastEvent;
+			}
+
+			int placedTasks = 0;
+			// Do the capacity test *FOR EACH TASK*
+			for (Task task : t) {
+				int capacityAte = f.getResourceCapacity(task.getResourceID()) + 1;
+				if (capacityAte <= maxResourceCapacity
+						&& checkConstraints(task, e.getTime(), s.getWStart(), s.getWEnd())) {
+					// mi = Math.max(0, mi - g.getTime() + f.getTime());
+					miMap.put(task.getID(), Math.max(0, miMap.get(task.getID()) - g.getTime() + f.getTime()));
+
+					fMap.put(task.getID(), g);
+					f = g;
+
+					placedTasks++;
+				}
+			}
+
+			if (placedTasks != t.size()) {
+				// start event e is NOT FEASIBLE
+				t.forEach(x -> miMap.putIfAbsent(x.getID(), x.getProcessingTime()));
+				e = g;
+				for (Task x : t) {
+					fMap.put(x.getID(), g);
+				}
+				f = g;
+			}
+			// finchè c'è un mi > 0...
+			miCondition = miMap.values().stream().filter(x -> x > 0).findAny().isPresent();
+		}
+
+		final int te = e.getTime();
+		Boolean allTaskFeasible = t.stream().map(x -> checkConstraints(x, te, s.getWStart(), s.getWEnd()))
+				.filter(x -> !x).findAny().get();
+
+		if (!allTaskFeasible) {
+			t.forEach(x -> events.forEach(ev -> ev.removePlan(x.getPlanID())));
+			return false;
+		}
+
+		// Add to schedule
+		t.forEach(task -> s.addTask(te, task));
+
+		// Add/Update event
+		for (Task task : t) {
+			e.addToS(task);
+			if (e.getTime() + task.getProcessingTime() == f.getTime()) {
+				f.addToC(task);
+			} else if (e.getTime() + task.getProcessingTime() > f.getTime()) {
+				Event newEvent = Event.get(e.getTime() + task.getProcessingTime(), resourcesIDs);
+				newEvent.setResourceCapacities(f.resourceCapacity());
+				f.addToC(task);
+				events.add(newEvent);
+				f = newEvent;
+			} else {
+				Event predf = EventUtils.getPreviousEvent(f, events).get();
+				Event newEvent = Event.get(e.getTime() + task.getProcessingTime(), resourcesIDs);
+				newEvent.setResourceCapacities(predf.resourceCapacity());
+				newEvent.addToC(task);
+				events.add(newEvent);
+				f = newEvent;
+			}
+
+			// update the resource usage
+			Event predf = EventUtils.getPreviousEvent(f, events).get();
+			for (Event ev : events) {
+				if (ev.getTime() >= e.getTime() && ev.getTime() <= predf.getTime()) {
+					ev.increaseResourceUsage(task.getResourceID());
+				}
+			}
+		}
+
+		return true;
+	}
+
+	/**
 	 * <b>ALGORITHM 4</b> Schedule the task t
 	 * 
 	 * @param maxResourceCapacity
@@ -523,8 +644,7 @@ public class Scheduler {
 	 */
 	private boolean scheduleTask(final int maxResourceCapacity, Schedule s, Task t, NavigableSet<Event> events) {
 		int sk = getInitialStartingTime(s.getWStart(), events, t);
-		Event e = getPreviousEvent(t, sk, events);
-		
+		Event e = getPreviousEvent(sk, events);
 		if (!events.contains(e)) {
 			events.add(e);
 		}
@@ -536,7 +656,7 @@ public class Scheduler {
 		try {
 			lastEvent = EventUtils.getLastEvent(s.getWEnd(), events).get();
 		} catch (NoSuchElementException ex) {
-			System.err.println("Error: no final event found.");
+			// System.err.println("Error: no final event found.");
 			return false;
 		}
 
@@ -616,7 +736,7 @@ public class Scheduler {
 	 * @param events
 	 * @return
 	 */
-	private Event getPreviousEvent(final Task t, int sk, final NavigableSet<Event> events) {
+	private Event getPreviousEvent(int sk, final NavigableSet<Event> events) {
 		Optional<Event> ev = events.stream().filter(e -> e.getTime() == sk).findFirst();
 
 		if (ev.isPresent()) {
@@ -632,8 +752,9 @@ public class Scheduler {
 	}
 
 	/**
-	 * Calculate the initial starting time s<sub>k</sub> for a task t. It is the maximum
-	 * between W<sub>s</sub>, r<sub>k</sub> and the latest completion time of the predecessors of t
+	 * Calculate the initial starting time s<sub>k</sub> for a task t. It is the
+	 * maximum between W<sub>s</sub>, r<sub>k</sub> and the latest completion
+	 * time of the predecessors of t
 	 * 
 	 * @param Ws
 	 * @param events
@@ -731,7 +852,7 @@ public class Scheduler {
 							+ Integer.toString(startingTime + t.getProcessingTime()) + " not in window [" + Ws + ","
 							+ We + "]");
 		} catch (IllegalArgumentException e) {
-			System.err.println(e.getMessage());
+			// System.err.println(e.getMessage());
 			return false;
 		}
 
