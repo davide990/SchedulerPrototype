@@ -192,7 +192,7 @@ public class Scheduler {
 	}
 
 	/**
-	 * 2 Return the set of scheduled plans within the temporal window [Ws,We]
+	 * 2 Return the set of scheduled plans within the temporal window [W<sub>s</sub>,W<sub>e</sub>]
 	 * 
 	 * @return
 	 */
@@ -201,7 +201,7 @@ public class Scheduler {
 	}
 
 	/**
-	 * Return the set of unscheduled plans within the temporal window [Ws,We]
+	 * Return the set of unscheduled plans within the temporal window [W<sub>s</sub>,W<sub>e</sub>]
 	 * 
 	 * @return
 	 */
@@ -523,17 +523,8 @@ public class Scheduler {
 	 */
 	private boolean scheduleTask(final int maxResourceCapacity, Schedule s, Task t, NavigableSet<Event> events) {
 		int sk = getInitialStartingTime(s.getWStart(), events, t);
-
-		if (t.getID() == 2 && t.getPlanID() == 6) {
-			System.err.println();
-		}
-
-		// Start event!
-		// Event e = EventUtils.getPreviousEvent(sk, numResources, true,
-		// events).get();
-
 		Event e = getPreviousEvent(t, sk, events);
-
+		
 		if (!events.contains(e)) {
 			events.add(e);
 		}
@@ -606,6 +597,10 @@ public class Scheduler {
 		return true;
 	}
 
+	/**
+	 * 
+	 * @return
+	 */
 	public Event getEndEvent() {
 		return events.stream().max(Event.getComparator()).get();
 	}
@@ -637,8 +632,8 @@ public class Scheduler {
 	}
 
 	/**
-	 * Calculate the initial starting time sk for a task t. It is the maximum
-	 * between Ws, rk and the latest completion time of the predecessors of t
+	 * Calculate the initial starting time s<sub>k</sub> for a task t. It is the maximum
+	 * between W<sub>s</sub>, r<sub>k</sub> and the latest completion time of the predecessors of t
 	 * 
 	 * @param Ws
 	 * @param events

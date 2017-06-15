@@ -46,7 +46,7 @@ public class TopologicalSorting {
 	 * @param node
 	 *            a plan or a task
 	 */
-	private static void topologicalSortUtil(ExecutableNode node, final List<ExecutableNode> nodes,
+	private static void topologicalSortUtil(final ExecutableNode node, final List<ExecutableNode> nodes,
 			List<Integer> visited, Stack<ImmutablePair<Integer, Integer>> stack, int frontier) {
 		// Mark the current node as visited.
 		visited.add(node.getID());
