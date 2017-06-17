@@ -68,6 +68,17 @@ public class EventUtils {
 		}
 	}
 
+	public static Optional<Event> getNextEventForResource(int resourceID, Event v, NavigableSet<Event> events) {
+		try {
+			return events.stream()
+					.filter(x -> x.getTime() > v.getTime() && x.taskStartingHere().stream()
+							.filter(t -> t.getResourceID() == resourceID).findAny().isPresent())
+					.min(Event.getComparator());
+		} catch (NoSuchElementException ex) {
+			return Optional.empty();
+		}
+	}
+
 	public static Optional<Event> getPreviousEvent(int t, Set<Integer> resourcesIDs, boolean inclusive,
 			NavigableSet<Event> events) {
 		try {

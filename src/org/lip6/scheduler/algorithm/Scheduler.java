@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.Set;
 import java.util.Stack;
 import java.util.TreeSet;
@@ -384,7 +383,7 @@ public class Scheduler {
 			}
 		}
 
-		// events.forEach(x -> System.err.println(x));
+		events.forEach(x -> System.err.println(x));
 
 		return lastFeasibleSolution;
 	}
@@ -493,17 +492,28 @@ public class Scheduler {
 	 */
 	private boolean schedulePlan(Plan pk, Schedule workingSolution, TreeSet<Event> events, int maxResourceCapacity) {
 
-		// Loop each task t in the plan pk
-		for (Task t : pk.getTasks()) {
-			// Check precedence constraints
-			if (!checkPrecedences(workingSolution, t)) {
+		if (pk.hasSyncTask()) {
+			if (!scheduleSyncTasks(maxResourceCapacity, workingSolution, pk.getSyncTasks(), events)) {
 				pk.setSchedulable(false);
-				break;
 			}
+		}
 
-			if (!scheduleTask(maxResourceCapacity, workingSolution, t, events)) {
-				pk.setSchedulable(false);
-				break;
+		// Loop each task t within the plan pk
+		if (pk.isSchedulable()) {
+			List<Task> remainingTasks = pk.getTasks().stream().filter(x -> !pk.getSyncTasks().contains(x))
+					.collect(Collectors.toList());
+
+			for (Task t : remainingTasks) {
+				// Check precedence constraints
+				if (!checkPrecedences(workingSolution, t)) {
+					pk.setSchedulable(false);
+					break;
+				}
+
+				if (!scheduleTask(maxResourceCapacity, workingSolution, t, events)) {
+					pk.setSchedulable(false);
+					break;
+				}
 			}
 		}
 		// At this point, each task of pk has been scheduled
@@ -529,7 +539,10 @@ public class Scheduler {
 	 */
 	private boolean scheduleSyncTasks(final int maxResourceCapacity, Schedule s, List<Task> t,
 			NavigableSet<Event> events) {
-		int sk = t.stream().mapToInt(x -> getInitialStartingTime(s.getWStart(), events, x)).min().getAsInt();
+
+		// Take the initial starting time as the maximum starting time available
+		// for each task
+		int sk = t.stream().mapToInt(x -> getInitialStartingTime(s.getWStart(), events, x)).max().getAsInt();
 		Event e = getPreviousEvent(sk, events);
 		if (!events.contains(e)) {
 			events.add(e);
@@ -537,66 +550,64 @@ public class Scheduler {
 
 		Event f = e;
 		Event g = f;
-
-		Map<Integer, Integer> miMap = new HashMap<>();
-		Map<Integer, Event> fMap = new HashMap<>();
-		t.forEach(x -> miMap.putIfAbsent(x.getID(), x.getProcessingTime()));
-
-		// int mi = t.getProcessingTime();
-
 		final Event lastEvent;
 		try {
 			lastEvent = EventUtils.getLastEvent(s.getWEnd(), events).get();
 		} catch (NoSuchElementException ex) {
-			// System.err.println("Error: no final event found.");
-			return false;
+			throw new NoSuchElementException("No event for We found.");
 		}
 
-		boolean miCondition = true;
-		while (miCondition && !f.equals(lastEvent)) {
+		int placedTasks = 0;
+		// mi is used to search the event e such that between e and next_e all
+		// the tasks can be scheduled. For this reason, its initial value is set
+		// as the maximum processing time of the tasks.
+		int mi = t.stream().mapToInt(x -> x.getProcessingTime()).max().getAsInt();
+		while (mi > 0 && !f.equals(lastEvent)) {
+
+			// For each tested event e, keep the number of schedulable tasks in
+			// e
+			placedTasks = 0;
 			if (EventUtils.getNextEvent(f, events).isPresent()) {
 				g = EventUtils.getNextEvent(f, events).get();
 			} else {
-				g = lastEvent;
+				break;
 			}
 
-			int placedTasks = 0;
 			// Do the capacity test *FOR EACH TASK*
 			for (Task task : t) {
 				int capacityAte = f.getResourceCapacity(task.getResourceID()) + 1;
 				if (capacityAte <= maxResourceCapacity
 						&& checkConstraints(task, e.getTime(), s.getWStart(), s.getWEnd())) {
-					// mi = Math.max(0, mi - g.getTime() + f.getTime());
-					miMap.put(task.getID(), Math.max(0, miMap.get(task.getID()) - g.getTime() + f.getTime()));
-
-					fMap.put(task.getID(), g);
-					f = g;
-
 					placedTasks++;
 				}
 			}
 
-			if (placedTasks != t.size()) {
-				// start event e is NOT FEASIBLE
-				t.forEach(x -> miMap.putIfAbsent(x.getID(), x.getProcessingTime()));
+			// Update the mi value
+			mi = Math.max(0, mi - g.getTime() + f.getTime());
+
+			if (placedTasks < t.size()) {
+				// start event e is NOT FEASIBLE, since not all the tasks can be
+				// scheduled in e
 				e = g;
-				for (Task x : t) {
-					fMap.put(x.getID(), g);
-				}
+				f = g;
+			} else {
 				f = g;
 			}
-			// finchè c'è un mi > 0...
-			miCondition = miMap.values().stream().filter(x -> x > 0).findAny().isPresent();
 		}
 
+		// The search for an event is terminated here, check if the last event
+		// found is feasible
 		final int te = e.getTime();
-		Boolean allTaskFeasible = t.stream().map(x -> checkConstraints(x, te, s.getWStart(), s.getWEnd()))
-				.filter(x -> !x).findAny().get();
+		Long feasibleTaskCount = t.stream().map(x -> checkConstraints(x, te, s.getWStart(), s.getWEnd())).filter(x -> x)
+				.count();
 
-		if (!allTaskFeasible) {
+		if (feasibleTaskCount < t.size()) {
 			t.forEach(x -> events.forEach(ev -> ev.removePlan(x.getPlanID())));
 			return false;
 		}
+
+		// Here the event is feasible, proceed to schedule the tasks and update
+		// the events.
 
 		// Add to schedule
 		t.forEach(task -> s.addTask(te, task));
@@ -629,7 +640,6 @@ public class Scheduler {
 				}
 			}
 		}
-
 		return true;
 	}
 

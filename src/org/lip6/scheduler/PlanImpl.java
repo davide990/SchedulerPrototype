@@ -35,6 +35,7 @@ public class PlanImpl extends ExecutableNode implements Plan {
 	private final String planName;
 	final List<Task> tasks = new LinkedList<>();
 	final List<Integer> successors;
+	final List<Integer> syncTasks;
 
 	/**
 	 * Private constructor. Use the static factory method instead.
@@ -50,6 +51,7 @@ public class PlanImpl extends ExecutableNode implements Plan {
 		this.executionTime = 0;
 		this.schedulable = true;
 		successors = new ArrayList<>();
+		syncTasks = new ArrayList<>();
 		startTime = Integer.MAX_VALUE;
 		endTime = Integer.MIN_VALUE;
 		planName = name;
@@ -74,6 +76,31 @@ public class PlanImpl extends ExecutableNode implements Plan {
 		// Prevent adding duplicates. I could have used Set to prevent
 		// duplicate, but Set is an unsorted data type in java.
 		p.successors.addAll(successors.stream().distinct().collect(Collectors.toList()));
+		return p;
+	}
+
+	/**
+	 * Static factory method for creating instances of PlanImpl
+	 * 
+	 * @param ID
+	 * @param name
+	 * @param priority
+	 * @param successors
+	 * @return
+	 */
+	public static PlanImpl get(int ID, String name, int priority, List<Integer> successors, List<Integer> syncTasks) {
+		if (priority < 0) {
+			throw new IllegalArgumentException("Priority must be >= 0.");
+		}
+
+		PlanImpl p = new PlanImpl(name, ID, priority);
+
+		// Prevent adding duplicates. I could have used Set to prevent
+		// duplicate, but Set is an unsorted data type in java.
+		p.successors.addAll(successors.stream().distinct().collect(Collectors.toList()));
+		
+		
+		syncTasks.forEach(s->p.addSyncTask(s));
 		return p;
 	}
 
@@ -128,6 +155,23 @@ public class PlanImpl extends ExecutableNode implements Plan {
 	@Override
 	public int getNumberOfTasks() {
 		return tasks.size();
+	}
+
+	@Override
+	public void addSyncTask(int ID) {
+		if (!syncTasks.contains(ID)) {
+			syncTasks.add(ID);
+		}
+	}
+
+	@Override
+	public boolean hasSyncTask() {
+		return syncTasks.size() > 0;
+	}
+
+	@Override
+	public List<Task> getSyncTasks() {
+		return tasks.stream().filter(x -> syncTasks.contains(x.getID())).collect(Collectors.toList());
 	}
 
 	@Override
@@ -192,7 +236,7 @@ public class PlanImpl extends ExecutableNode implements Plan {
 	}
 
 	@Override
-	public Collection<Task> getTasks() {
+	public List<Task> getTasks() {
 		return tasks.stream().collect(Collectors.toList());
 	}
 

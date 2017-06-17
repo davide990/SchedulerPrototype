@@ -6,6 +6,8 @@ import java.util.function.BiFunction;
 public interface Task {
 
 	int getResourceID();
+	
+	int getResourceUsage();
 
 	int getID();
 

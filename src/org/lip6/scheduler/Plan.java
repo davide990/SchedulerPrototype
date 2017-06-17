@@ -16,11 +16,17 @@ public interface Plan {
 	 */
 	void addTask(Task t);
 
-	Collection<Task> getTasks();
+	List<Task> getTasks();
 
 	List<Integer> getSuccessors();
 
 	void addSuccessor(int ID);
+	
+	void addSyncTask(int ID);
+	
+	boolean hasSyncTask();
+	
+	List<Task> getSyncTasks();
 
 	void removeSuccessor(int ID);
 

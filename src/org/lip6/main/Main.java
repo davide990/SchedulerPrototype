@@ -21,15 +21,15 @@ public class Main {
 		
 		EtmPoint point = monitor.createPoint("Scheduler:buildSchedule");
 
-		String filename = "/home/davide/test_case_2.csv";
-		// String filename = "/home/davide/paper_plans_nouveau.csv";
+		//String filename = "/home/davide/test_case_2.csv";
+		String filename = "/home/davide/paper_plans_nouveau.csv";
 		int WStart = 1;
 		int WEnd = 200;
 		int maxResourceCapacity = 1;
 
 		Scheduler sc = SchedulerFactory.getFromFile(maxResourceCapacity, WStart, WEnd, filename);
 
-		try {
+	//	try {
 			
 			 long startTime = System.currentTimeMillis();
 
@@ -38,15 +38,15 @@ public class Main {
 			 long result = endTime - startTime; //Note, part might be backwards, I don't
 			 
 			 System.err.println("---> "+Long.toString(result));
-
+/*
 		} finally {
 			point.collect();
-		}
+		}*/
 		// visualize results
-		monitor.render(new SimpleTextRenderer());
+		//monitor.render(new SimpleTextRenderer());
 
 		// shutdown measurement framework
-		tearDown();
+		//tearDown();
 	}
 
 	private static void setup() {

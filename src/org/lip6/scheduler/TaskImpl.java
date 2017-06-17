@@ -13,6 +13,7 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 	final int planID;
 	final String planName;
 	final int resourceID;
+	final int resourceUsage;
 	final int releaseTime;
 	final int dueDate;
 
@@ -23,11 +24,12 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 	final List<Integer> predecessors;
 	final List<Integer> successors;
 
-	TaskImpl(int taskID, int planID, int resourceID, int releaseTime, int dueDate, int processingTime, int planPriority,
-			List<Integer> predecessors) {
+	TaskImpl(int taskID, int planID, int resourceID, int resourceUsage, int releaseTime, int dueDate,
+			int processingTime, int planPriority, List<Integer> predecessors) {
 		this.taskID = taskID;
 		this.planID = planID;
 		this.resourceID = resourceID;
+		this.resourceUsage = resourceUsage;
 		this.releaseTime = releaseTime;
 		this.dueDate = dueDate;
 		this.processingTime = processingTime;
@@ -38,11 +40,12 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 		processingTimeFunction = Optional.empty();
 	}
 
-	TaskImpl(int taskID, int planID, String planName, int resourceID, int releaseTime, int dueDate, int processingTime,
-			int planPriority, List<Integer> predecessors) {
+	TaskImpl(int taskID, int planID, String planName, int resourceID, int resourceUsage, int releaseTime, int dueDate,
+			int processingTime, int planPriority, List<Integer> predecessors) {
 		this.taskID = taskID;
 		this.planID = planID;
 		this.resourceID = resourceID;
+		this.resourceUsage = resourceUsage;
 		this.releaseTime = releaseTime;
 		this.dueDate = dueDate;
 		this.processingTime = processingTime;
@@ -55,8 +58,8 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 
 	@Override
 	public Object clone() {
-		return TaskFactory.getTask(taskID, planID, planName, resourceID, releaseTime, dueDate, processingTime,
-				planPriority, predecessors);
+		return TaskFactory.getTask(taskID, planID, planName, resourceID, resourceUsage, releaseTime, dueDate,
+				processingTime, planPriority, predecessors);
 	}
 
 	/*
@@ -77,6 +80,11 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 	@Override
 	public int getID() {
 		return taskID;
+	}
+
+	@Override
+	public int getResourceUsage() {
+		return resourceUsage;
 	}
 
 	/*
