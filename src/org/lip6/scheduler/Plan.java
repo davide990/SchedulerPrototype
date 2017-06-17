@@ -1,6 +1,5 @@
 package org.lip6.scheduler;
 
-import java.util.Collection;
 import java.util.List;
 
 public interface Plan {

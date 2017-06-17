@@ -13,7 +13,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.commons.csv.CSVFormat;
@@ -56,10 +55,10 @@ public class CSVParser {
 			int taskID = Integer.parseInt(record.get("taskID"));
 			int resourceID = Integer.parseInt(record.get("resourceID"));
 
-			//Assign 1 as default resource usage
-			String ru =record.get("resourceUsage");
+			// Assign 1 as default resource usage
+			String ru = record.get("resourceUsage");
 			int resourceUsage = Integer.parseInt(ru.equals("") ? "1" : ru);
-			
+
 			int releaseTime = Integer.parseInt(record.get("releaseTime"));
 			int dueDate = Integer.parseInt(record.get("dueDate"));
 			int processingTime = Integer.parseInt(record.get("processingTime"));

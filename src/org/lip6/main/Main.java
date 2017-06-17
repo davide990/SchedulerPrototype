@@ -25,7 +25,7 @@ public class Main {
 		String filename = "/home/davide/paper_plans_nouveau.csv";
 		int WStart = 1;
 		int WEnd = 200;
-		int maxResourceCapacity = 1;
+		int maxResourceCapacity = 2;
 
 		Scheduler sc = SchedulerFactory.getFromFile(maxResourceCapacity, WStart, WEnd, filename);
 

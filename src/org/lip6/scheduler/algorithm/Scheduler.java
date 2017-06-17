@@ -575,7 +575,7 @@ public class Scheduler {
 
 			// Do the capacity test *FOR EACH TASK*
 			for (Task task : t) {
-				int capacityAte = f.getResourceCapacity(task.getResourceID()) + 1;
+				int capacityAte = f.getResourceCapacity(task.getResourceID()) + task.getResourceUsage();
 				if (capacityAte <= maxResourceCapacity
 						&& checkConstraints(task, e.getTime(), s.getWStart(), s.getWEnd())) {
 					placedTasks++;
@@ -678,7 +678,8 @@ public class Scheduler {
 			}
 
 			// Do the capacity test
-			int capacityAte = f.getResourceCapacity(t.getResourceID()) + 1;
+			// int capacityAte = f.getResourceCapacity(t.getResourceID()) + 1;
+			int capacityAte = f.getResourceCapacity(t.getResourceID()) + t.getResourceUsage();
 			if (capacityAte <= maxResourceCapacity && checkConstraints(t, e.getTime(), s.getWStart(), s.getWEnd())) {
 				mi = Math.max(0, mi - g.getTime() + f.getTime());
 				f = g;

@@ -43,7 +43,9 @@ public class Event implements Cloneable, Comparable<Event> {
 	 */
 	private Set<Task> terminating;
 	/**
-	 * A map that contains the usage (value) of each resource(key).
+	 * A map that contains the usage (value) of each resource(key). <br/>
+	 * The value represents how much resource is used between t<sub>e</sub> and
+	 * next<sub>t<sub>e</sub></sub>
 	 */
 	private Map<Integer, Integer> resourceUsage;
 
