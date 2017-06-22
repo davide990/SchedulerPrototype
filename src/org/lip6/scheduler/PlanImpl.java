@@ -2,7 +2,6 @@ package org.lip6.scheduler;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -32,7 +31,7 @@ public class PlanImpl extends ExecutableNode implements Plan {
 	private int endTime;
 	private float planScore;
 	private final String planName;
-	final List<Task> tasks = new LinkedList<>();
+	final List<Task> tasks = new ArrayList<>();
 	final List<Integer> successors;
 	final List<Integer> syncTasks;
 

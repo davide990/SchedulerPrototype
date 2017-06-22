@@ -16,8 +16,8 @@ import java.util.Stack;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.list.TreeList;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.lip6.graph.GraphUtils;
 import org.lip6.graph.TopologicalSorting;
 import org.lip6.scheduler.ExecutableNode;
 import org.lip6.scheduler.Plan;
@@ -222,7 +222,7 @@ public class Scheduler {
 	}
 
 	/**
-	 * Get Ws
+	 * Get W<sub>s</sub>
 	 * 
 	 * @return
 	 */
@@ -231,7 +231,7 @@ public class Scheduler {
 	}
 
 	/**
-	 * Get We
+	 * Get W<sub>e</sub>
 	 * 
 	 * @return
 	 */
@@ -270,20 +270,27 @@ public class Scheduler {
 			// solution.");
 			return workingSolution;
 		}
+
 		// Create a copy of the set of plans to schedule
-		List<Plan> plansInput = new ArrayList<>(plans);
+		// --
+		// TreeList for fast add/remove operations! Why not an HashSet? Because
+		// with Set collection the order of elements is not guarantee.
+		List<Plan> plansInput = new TreeList<>(plans);
 
 		// Sort the plans according to the precedences (if any), and also
 		// according to their priority value
 		plansInput = sortPlans(plansInput.stream().map(x -> (ExecutableNode) x).collect(Collectors.toList()));
 
-		GraphUtils.graphToDot(plansInput, "/home/davide/OUTPUT_DOT.dot");
-
 		// Create a map containing, for each priority as key value, a list of
 		// plans having each one the priority value as key. This is used later
 		// to schedule plans that have the same priority value.
 		Map<Integer, Integer> prioritiesCountMap = new HashMap<>();
-		Map<Integer, List<Plan>> plansWithSamePriority = new HashMap<>();
+
+		// Why a TreeList here? Because it provides better performance in
+		// add/remove operations compared to ArrayList. Add/remove operations
+		// takes
+		// O(log n) time with a TreeList.
+		Map<Integer, TreeList<Plan>> plansWithSamePriority = new HashMap<>();
 		plansInput.forEach(x -> {
 			if (!prioritiesCountMap.containsKey(x.getPriority())) {
 				prioritiesCountMap.put(x.getPriority(), 1);
@@ -293,7 +300,7 @@ public class Scheduler {
 
 				if (newVal > 1) {
 					if (!plansWithSamePriority.containsKey(x.getPriority())) {
-						plansWithSamePriority.put(x.getPriority(), new ArrayList<>());
+						plansWithSamePriority.put(x.getPriority(), new TreeList<>());
 					}
 					plansWithSamePriority.get(x.getPriority()).add(x);
 				}
@@ -490,7 +497,8 @@ public class Scheduler {
 	 * @param events
 	 * @param maxResourceCapacity
 	 */
-	private boolean schedulePlan(Plan pk, Schedule workingSolution, TreeSet<Event> events, int maxResourceCapacity) {
+	private boolean schedulePlan(Plan pk, Schedule workingSolution, TreeSet<Event> events,
+			final int maxResourceCapacity) {
 
 		if (pk.hasSyncTask()) {
 			if (!scheduleSyncTasks(maxResourceCapacity, workingSolution, pk.getSyncTasks(), events)) {
@@ -805,7 +813,7 @@ public class Scheduler {
 	 * @return the sorted set of plans
 	 */
 	private List<Plan> sortPlans(final List<ExecutableNode> plans) {
-		List<Plan> sortedPlanList = new ArrayList<>();
+		List<Plan> sortedPlanList = new TreeList<>();
 		// Sort topologically the nodes. Each pair is: (left: plan ID, right:
 		// frontier which the plan belongs to into the precedences graph)
 		Stack<ImmutablePair<Integer, Integer>> topologicallySortedPlans = TopologicalSorting

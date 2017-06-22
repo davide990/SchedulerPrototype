@@ -27,6 +27,8 @@ public class GraphUtils {
 	 * To produce a pdf file using the produced dot file, execute (under
 	 * UNIX):<br/>
 	 * <br/>
+	 * Example of usage: {@code GraphUtils.graphToDot(plans, "/home/user/output.dot");}
+	 * <br/>
 	 * 
 	 * {@code dot -Tpdf [filename.dot] -O}
 	 * @param plans

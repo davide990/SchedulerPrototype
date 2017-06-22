@@ -11,8 +11,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.list.TreeList;
 import org.lip6.scheduler.utils.Utils;
 
 /**
@@ -44,8 +46,12 @@ public class Schedule implements Cloneable {
 	 * Recall that each TaskSchedule actually represents a starting time for a
 	 * scheduled task, together with other useful informations used, for
 	 * example, for rendering tasks in the web interface.
+	 * 
+	 * Why a TreeSet? Because it provides guaranteed log(n) time cost for the
+	 * basic operations (add, remove and contains). Also, it lets to specify a
+	 * comparator to keep the set sorted after insertion/removal operations.
 	 */
-	private final Queue<TaskSchedule> schedule;
+	private final TreeSet<TaskSchedule> schedule;	
 
 	private Schedule(int wStart, int wEnd) {
 		// this.numResources = numResources;
@@ -53,7 +59,7 @@ public class Schedule implements Cloneable {
 		WEnd = wEnd;
 		plans = new ArrayList<>();
 		lastTaskForResource = new HashMap<>();
-		schedule = new PriorityQueue<>(new Comparator<TaskSchedule>() {
+		schedule = new TreeSet<>(new Comparator<TaskSchedule>() {
 			@Override
 			public int compare(TaskSchedule o1, TaskSchedule o2) {
 				return Integer.compare(o1.getStartingTime(), o2.getStartingTime());
