@@ -12,7 +12,7 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 	final int taskID;
 	final int planID;
 	final String planName;
-	final int resourceID;
+	final List<Integer> resourceIDs;
 	final int resourceUsage;
 	final int releaseTime;
 	final int dueDate;
@@ -24,32 +24,32 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 	final List<Integer> predecessors;
 	final List<Integer> successors;
 
-	TaskImpl(int taskID, int planID, int resourceID, int resourceUsage, int releaseTime, int dueDate,
+	TaskImpl(int taskID, int planID, List<Integer> resourceIDs, int resourceUsage, int releaseTime, int dueDate,
 			int processingTime, int planPriority, List<Integer> predecessors) {
 		this.taskID = taskID;
 		this.planID = planID;
-		this.resourceID = resourceID;
 		this.resourceUsage = resourceUsage;
 		this.releaseTime = releaseTime;
 		this.dueDate = dueDate;
 		this.processingTime = processingTime;
 		this.planPriority = planPriority;
+		this.resourceIDs = new ArrayList<>(resourceIDs);
 		this.predecessors = new ArrayList<>(predecessors);
 		this.successors = new ArrayList<>();
 		this.planName = "";
 		processingTimeFunction = Optional.empty();
 	}
 
-	TaskImpl(int taskID, int planID, String planName, int resourceID, int resourceUsage, int releaseTime, int dueDate,
+	TaskImpl(int taskID, int planID, String planName, List<Integer> resourceIDs, int resourceUsage, int releaseTime, int dueDate,
 			int processingTime, int planPriority, List<Integer> predecessors) {
 		this.taskID = taskID;
 		this.planID = planID;
-		this.resourceID = resourceID;
 		this.resourceUsage = resourceUsage;
 		this.releaseTime = releaseTime;
 		this.dueDate = dueDate;
 		this.processingTime = processingTime;
 		this.planPriority = planPriority;
+		this.resourceIDs = new ArrayList<>(resourceIDs);
 		this.predecessors = new ArrayList<>(predecessors);
 		this.successors = new ArrayList<>();
 		this.planName = planName;
@@ -58,7 +58,7 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 
 	@Override
 	public Object clone() {
-		return TaskFactory.getTask(taskID, planID, planName, resourceID, resourceUsage, releaseTime, dueDate,
+		return TaskFactory.getTask(taskID, planID, planName, resourceIDs, resourceUsage, releaseTime, dueDate,
 				processingTime, planPriority, predecessors);
 	}
 
@@ -68,8 +68,8 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 	 * @see org.lip6.scheduler.Task#getResourceID()
 	 */
 	@Override
-	public int getResourceID() {
-		return resourceID;
+	public List<Integer> getResourcesID() {
+		return resourceIDs;
 	}
 
 	/*

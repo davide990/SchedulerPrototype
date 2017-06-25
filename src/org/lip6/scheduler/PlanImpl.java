@@ -9,6 +9,13 @@ import java.util.stream.Collectors;
 
 import org.lip6.graph.TopologicalSorting;
 
+/**
+ * The plan implementation.
+ * 
+ * @author <a href="mailto:davide-andrea.guastella@lip6.fr">Davide Andrea
+ *         Guastella</a>
+ *
+ */
 public class PlanImpl extends ExecutableNode implements Plan {
 
 	private final int ID;
@@ -96,9 +103,8 @@ public class PlanImpl extends ExecutableNode implements Plan {
 		// Prevent adding duplicates. I could have used Set to prevent
 		// duplicate, but Set is an unsorted data type in java.
 		p.successors.addAll(successors.stream().distinct().collect(Collectors.toList()));
-		
-		
-		syncTasks.forEach(s->p.addSyncTask(s));
+
+		syncTasks.forEach(s -> p.addSyncTask(s));
 		return p;
 	}
 

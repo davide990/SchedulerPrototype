@@ -5,7 +5,7 @@ import java.util.function.BiFunction;
 
 public interface Task {
 
-	int getResourceID();
+	List<Integer> getResourcesID();
 	
 	int getResourceUsage();
 

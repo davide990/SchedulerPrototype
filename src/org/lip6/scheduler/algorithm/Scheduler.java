@@ -154,8 +154,11 @@ public class Scheduler {
 
 		// retrieve the IDs of the resources
 		for (Plan p : plans) {
-			scheduler.resourcesIDs
-					.addAll(p.getTasks().stream().map(x -> x.getResourceID()).collect(Collectors.toList()));
+			scheduler.resourcesIDs.addAll(p.getTasks().stream().flatMap(x -> x.getResourcesID().stream()).distinct()
+					.collect(Collectors.toList())); // map(x ->
+													// x.getResourceID()).collect(Collectors.toList()));
+			// .addAll(p.getTasks().stream().map(x ->
+			// x.getResourceID()).collect(Collectors.toList()));
 		}
 
 		// Create two events for Ws and We
@@ -179,7 +182,10 @@ public class Scheduler {
 	public void addPlans(List<Plan> plans) {
 		this.plans.addAll(plans);
 		for (Plan p : plans) {
-			resourcesIDs.addAll(p.getTasks().stream().map(x -> x.getResourceID()).collect(Collectors.toList()));
+			// resourcesIDs.addAll(p.getTasks().stream().map(x ->
+			// x.getResourceID()).collect(Collectors.toList()));
+			resourcesIDs.addAll(p.getTasks().stream().flatMap(x -> x.getResourcesID().stream()).distinct()
+					.collect(Collectors.toList()));
 		}
 	}
 
@@ -246,11 +252,11 @@ public class Scheduler {
 	 * @param wEnd
 	 */
 	public void setTemporalWindow(int wStart, int wEnd) {
-		if (!events.stream().filter(x -> x.getTime() == this.wStart).findFirst().isPresent()) {
+		if (!events.stream().filter(x -> x.getTimeInstant() == this.wStart).findFirst().isPresent()) {
 			events.add(Event.get(wStart, resourcesIDs));
 		}
 
-		if (!events.stream().filter(x -> x.getTime() == this.wEnd).findFirst().isPresent()) {
+		if (!events.stream().filter(x -> x.getTimeInstant() == this.wEnd).findFirst().isPresent()) {
 			events.add(Event.get(wEnd, resourcesIDs));
 		}
 	}
@@ -397,10 +403,9 @@ public class Scheduler {
 
 	/**
 	 * <b>ALGORITHM 3</b> Schedule a set of plans that have the same priority
-	 * value. <br/>
-	 * The plans are scheduled in order to minimize the idle time. An idle time
-	 * occurs when between the accomplishment date of a task and the starting
-	 * time of its successor, a task can be placed.
+	 * value. The plans are scheduled in order to minimize the idle time. An
+	 * idle time occurs when between the accomplishment date of a task and the
+	 * starting time of its successor, a task can be placed.
 	 * 
 	 * @param plans
 	 *            the set of plans to schedule
@@ -455,7 +460,7 @@ public class Scheduler {
 						Optional<Event> pred_e = EventUtils.getPreviousEvent(e, E, false);
 						if (t.isPresent() && pred_e.isPresent()) {
 							// Update the idle time value
-							idleTime += e.getTime() - pred_e.get().getTime();
+							idleTime += e.getTimeInstant() - pred_e.get().getTimeInstant();
 						}
 					}
 
@@ -464,13 +469,10 @@ public class Scheduler {
 					if (idleTime < bestIdleTime) {
 						bestPlan = Optional.of(p);
 						bestIdleTime = idleTime;
-						// System.err.println("Best idle time: " + bestIdleTime
-						// + " for plan #" + p.getID());
 					}
 				} else {
 					toDelete = Optional.of(p);
 				}
-
 			}
 
 			// Schedule the plan with the minimum idle time
@@ -479,7 +481,6 @@ public class Scheduler {
 				plansList.remove(bestPlan.get());
 			} else {
 				// Otherwise, just delete it from the set of plans
-
 				plansList.remove(toDelete.get());
 				unscheduled.add(toDelete.get());
 			}
@@ -500,36 +501,25 @@ public class Scheduler {
 	private boolean schedulePlan(Plan pk, Schedule workingSolution, TreeSet<Event> events,
 			final int maxResourceCapacity) {
 
-		if (pk.hasSyncTask()) {
-			if (!scheduleSyncTasks(maxResourceCapacity, workingSolution, pk.getSyncTasks(), events)) {
+		// Loop each task t in the plan pk
+		for (Task t : pk.getTasks()) {
+			// Check precedence constraints
+			if (!checkPrecedences(workingSolution, t)) {
 				pk.setSchedulable(false);
+				break;
 			}
-		}
 
-		// Loop each task t within the plan pk
-		if (pk.isSchedulable()) {
-			List<Task> remainingTasks = pk.getTasks().stream().filter(x -> !pk.getSyncTasks().contains(x))
-					.collect(Collectors.toList());
-
-			for (Task t : remainingTasks) {
-				// Check precedence constraints
-				if (!checkPrecedences(workingSolution, t)) {
-					pk.setSchedulable(false);
-					break;
-				}
-
-				if (!scheduleTask(maxResourceCapacity, workingSolution, t, events)) {
-					pk.setSchedulable(false);
-					break;
-				}
+			if (!scheduleTask(maxResourceCapacity, workingSolution, t, events)) {
+				pk.setSchedulable(false);
+				break;
 			}
 		}
 		// At this point, each task of pk has been scheduled
 		if (pk.isSchedulable()) {
 			return true;
 		} else {
-			// pk is NOT schedulable: take all its tasks and remove them
-			// from the solution
+			// The plan pk is NOT schedulable: take all its tasks and remove
+			// them from the solution
 			List<TaskSchedule> toRemove = workingSolution.taskSchedules().stream()
 					.filter(x -> ((Task) x.getTask()).getPlanID() == pk.getID()).collect(Collectors.toList());
 			workingSolution.unSchedule(toRemove);
@@ -538,129 +528,29 @@ public class Scheduler {
 	}
 
 	/**
+	 * <b>ALGORITHM 4</b> Schedule the task t <br/>
+	 * <br/>
+	 * This algorithm tries to find an event <i>e</i> such that the task
+	 * <i>t</i> could be scheduled exactly at <i>t(e)</i> and also on
+	 * <b>different resources.</b>
 	 * 
 	 * @param maxResourceCapacity
 	 * @param s
+	 *            the current working solution
 	 * @param t
+	 *            the task to schedule
+	 * @param resources
+	 *            the list of resources' ID into which t must be scheduled
 	 * @param events
-	 * @return
-	 */
-	private boolean scheduleSyncTasks(final int maxResourceCapacity, Schedule s, List<Task> t,
-			NavigableSet<Event> events) {
-
-		// Take the initial starting time as the maximum starting time available
-		// for each task
-		int sk = t.stream().mapToInt(x -> getInitialStartingTime(s.getWStart(), events, x)).max().getAsInt();
-		Event e = getPreviousEvent(sk, events);
-		if (!events.contains(e)) {
-			events.add(e);
-		}
-
-		Event f = e;
-		Event g = f;
-		final Event lastEvent;
-		try {
-			lastEvent = EventUtils.getLastEvent(s.getWEnd(), events).get();
-		} catch (NoSuchElementException ex) {
-			throw new NoSuchElementException("No event for We found.");
-		}
-
-		int placedTasks = 0;
-		// mi is used to search the event e such that between e and next_e all
-		// the tasks can be scheduled. For this reason, its initial value is set
-		// as the maximum processing time of the tasks.
-		int mi = t.stream().mapToInt(x -> x.getProcessingTime()).max().getAsInt();
-		while (mi > 0 && !f.equals(lastEvent)) {
-
-			// For each tested event e, keep the number of schedulable tasks in
-			// e
-			placedTasks = 0;
-			if (EventUtils.getNextEvent(f, events).isPresent()) {
-				g = EventUtils.getNextEvent(f, events).get();
-			} else {
-				break;
-			}
-
-			// Do the capacity test *FOR EACH TASK*
-			for (Task task : t) {
-				int capacityAte = f.getResourceCapacity(task.getResourceID()) + task.getResourceUsage();
-				if (capacityAte <= maxResourceCapacity
-						&& checkConstraints(task, e.getTime(), s.getWStart(), s.getWEnd())) {
-					placedTasks++;
-				}
-			}
-
-			// Update the mi value
-			mi = Math.max(0, mi - g.getTime() + f.getTime());
-
-			if (placedTasks < t.size()) {
-				// start event e is NOT FEASIBLE, since not all the tasks can be
-				// scheduled in e
-				e = g;
-				f = g;
-			} else {
-				f = g;
-			}
-		}
-
-		// The search for an event is terminated here, check if the last event
-		// found is feasible
-		final int te = e.getTime();
-		Long feasibleTaskCount = t.stream().map(x -> checkConstraints(x, te, s.getWStart(), s.getWEnd())).filter(x -> x)
-				.count();
-
-		if (feasibleTaskCount < t.size()) {
-			t.forEach(x -> events.forEach(ev -> ev.removePlan(x.getPlanID())));
-			return false;
-		}
-
-		// Here the event is feasible, proceed to schedule the tasks and update
-		// the events.
-
-		// Add to schedule
-		t.forEach(task -> s.addTask(te, task));
-
-		// Add/Update event
-		for (Task task : t) {
-			e.addToS(task);
-			if (e.getTime() + task.getProcessingTime() == f.getTime()) {
-				f.addToC(task);
-			} else if (e.getTime() + task.getProcessingTime() > f.getTime()) {
-				Event newEvent = Event.get(e.getTime() + task.getProcessingTime(), resourcesIDs);
-				newEvent.setResourceCapacities(f.resourceCapacity());
-				f.addToC(task);
-				events.add(newEvent);
-				f = newEvent;
-			} else {
-				Event predf = EventUtils.getPreviousEvent(f, events).get();
-				Event newEvent = Event.get(e.getTime() + task.getProcessingTime(), resourcesIDs);
-				newEvent.setResourceCapacities(predf.resourceCapacity());
-				newEvent.addToC(task);
-				events.add(newEvent);
-				f = newEvent;
-			}
-
-			// update the resource usage
-			Event predf = EventUtils.getPreviousEvent(f, events).get();
-			for (Event ev : events) {
-				if (ev.getTime() >= e.getTime() && ev.getTime() <= predf.getTime()) {
-					ev.increaseResourceUsage(task.getResourceID());
-				}
-			}
-		}
-		return true;
-	}
-
-	/**
-	 * <b>ALGORITHM 4</b> Schedule the task t
-	 * 
-	 * @param maxResourceCapacity
-	 * @param s
-	 * @param t
-	 * @param events
-	 * @return
+	 *            the list of events
+	 * @return true if the task has been scheduled successfully, false otherwise
 	 */
 	private boolean scheduleTask(final int maxResourceCapacity, Schedule s, Task t, NavigableSet<Event> events) {
+
+		// Get the resources into which the task must be scheduled
+		final List<Integer> resources = t.getResourcesID();
+
+		// Calculate the earliest starting time for the task
 		int sk = getInitialStartingTime(s.getWStart(), events, t);
 		Event e = getPreviousEvent(sk, events);
 		if (!events.contains(e)) {
@@ -678,6 +568,9 @@ public class Scheduler {
 			return false;
 		}
 
+		// A boolean variable that indicates whether the resource test is
+		// successful or not
+		boolean resourceTest = true;
 		while (mi > 0 && !f.equals(lastEvent)) {
 			if (EventUtils.getNextEvent(f, events).isPresent()) {
 				g = EventUtils.getNextEvent(f, events).get();
@@ -686,10 +579,18 @@ public class Scheduler {
 			}
 
 			// Do the capacity test
-			// int capacityAte = f.getResourceCapacity(t.getResourceID()) + 1;
-			int capacityAte = f.getResourceCapacity(t.getResourceID()) + t.getResourceUsage();
-			if (capacityAte <= maxResourceCapacity && checkConstraints(t, e.getTime(), s.getWStart(), s.getWEnd())) {
-				mi = Math.max(0, mi - g.getTime() + f.getTime());
+			resourceTest = true;
+			for (Integer resID : resources) {
+				if (f.getResourceCapacity(resID) + t.getResourceUsage() > maxResourceCapacity) {
+					resourceTest = false;
+					break;
+				}
+			}
+
+			// Here, the resource test is successful. Proceed with temporal
+			// constraints.
+			if (resourceTest && checkConstraints(t, e.getTimeInstant(), s.getWStart(), s.getWEnd())) {
+				mi = Math.max(0, mi - g.getTimeInstant() + f.getTimeInstant());
 				f = g;
 			} else {
 				// start event e is NOT FEASIBLE
@@ -699,38 +600,39 @@ public class Scheduler {
 			}
 		}
 
-		if (!checkConstraints(t, e.getTime(), s.getWStart(), s.getWEnd())) {
+		// If the constraints are not met, the plan is not schedulable
+		if (/* !resourceTest || */!checkConstraints(t, e.getTimeInstant(), s.getWStart(), s.getWEnd())) {
 			events.forEach(ev -> ev.removePlan(t.getPlanID()));
 			return false;
 		}
 
 		// Add to schedule
-		s.addTask(e.getTime(), t);
+		s.addTask(e.getTimeInstant(), t);
 
-		// Add/Update event
+		// Update the events list
 		e.addToS(t);
-		if (e.getTime() + t.getProcessingTime() == f.getTime()) {
+		if (e.getTimeInstant() + t.getProcessingTime() == f.getTimeInstant()) {
 			f.addToC(t);
-		} else if (e.getTime() + t.getProcessingTime() > f.getTime()) {
-			Event newEvent = Event.get(e.getTime() + t.getProcessingTime(), resourcesIDs);
-			newEvent.setResourceCapacities(f.resourceCapacity());
+		} else if (e.getTimeInstant() + t.getProcessingTime() > f.getTimeInstant()) {
+			Event newEvent = Event.get(e.getTimeInstant() + t.getProcessingTime(), resourcesIDs);
+			newEvent.setResourceCapacities(f.resourceUsages());
 			f.addToC(t);
 			events.add(newEvent);
 			f = newEvent;
 		} else {
 			Event predf = EventUtils.getPreviousEvent(f, events).get();
-			Event newEvent = Event.get(e.getTime() + t.getProcessingTime(), resourcesIDs);
-			newEvent.setResourceCapacities(predf.resourceCapacity());
+			Event newEvent = Event.get(e.getTimeInstant() + t.getProcessingTime(), resourcesIDs);
+			newEvent.setResourceCapacities(predf.resourceUsages());
 			newEvent.addToC(t);
 			events.add(newEvent);
 			f = newEvent;
 		}
 
-		// update the resource usage
+		// Update the resource usage
 		Event predf = EventUtils.getPreviousEvent(f, events).get();
 		for (Event ev : events) {
-			if (ev.getTime() >= e.getTime() && ev.getTime() <= predf.getTime()) {
-				ev.increaseResourceUsage(t.getResourceID());
+			if (ev.getTimeInstant() >= e.getTimeInstant() && ev.getTimeInstant() <= predf.getTimeInstant()) {
+				resources.forEach(res -> ev.increaseResourceUsage(res));
 			}
 		}
 		return true;
@@ -756,7 +658,7 @@ public class Scheduler {
 	 * @return
 	 */
 	private Event getPreviousEvent(int sk, final NavigableSet<Event> events) {
-		Optional<Event> ev = events.stream().filter(e -> e.getTime() == sk).findFirst();
+		Optional<Event> ev = events.stream().filter(e -> e.getTimeInstant() == sk).findFirst();
 
 		if (ev.isPresent()) {
 			return ev.get();
@@ -764,7 +666,7 @@ public class Scheduler {
 			Event event = Event.get(sk, resourcesIDs);
 
 			Event predf = EventUtils.getPreviousEvent(event, events).get();
-			event.setResourceCapacities(predf.resourceCapacity());
+			event.setResourceCapacities(predf.resourceUsages());
 
 			return event;
 		}
@@ -788,8 +690,8 @@ public class Scheduler {
 					.filter(x -> x.getPlanID() == t.getPlanID() && t.getPredecessors().contains(x.getID())).findFirst();
 
 			if (pr.isPresent()) {
-				if (event.getTime() > maxTime) {
-					maxTime = event.getTime();
+				if (event.getTimeInstant() > maxTime) {
+					maxTime = event.getTimeInstant();
 				}
 			}
 		}

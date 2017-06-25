@@ -23,6 +23,12 @@ import org.lip6.scheduler.PlanImpl;
 import org.lip6.scheduler.Task;
 import org.lip6.scheduler.TaskFactory;
 
+/**
+ * Utility class for (de)serialize CSV files containing the plans.
+ * 
+ * @author <a href="mailto:davide-andrea.guastella@lip6.fr">Davide Andrea
+ *         Guastella</a>
+ */
 public class CSVParser {
 
 	private enum csvHeaders {
@@ -53,7 +59,7 @@ public class CSVParser {
 			String planName = record.get("planName");
 			int planPriority = Integer.parseInt(record.get("planPriority"));
 			int taskID = Integer.parseInt(record.get("taskID"));
-			int resourceID = Integer.parseInt(record.get("resourceID"));
+			List<Integer> resourceID = parseList(record.get("resourceID"));
 
 			// Assign 1 as default resource usage
 			String ru = record.get("resourceUsage");
@@ -117,8 +123,9 @@ public class CSVParser {
 
 		for (Plan p : plans) {
 			for (Task t : p.getTasks()) {
-				printer.printRecord(t.getID(), t.getPlanID(), p.getPriority(), t.getResourceID(), t.getReleaseTime(),
-						t.getProcessingTime());
+				printer.printRecord(t.getID(), t.getPlanID(), p.getPriority(),
+						t.getResourcesID().stream().map(r -> Integer.toString(r)).collect(Collectors.joining(";")),
+						t.getReleaseTime(), t.getProcessingTime());
 			}
 
 		}

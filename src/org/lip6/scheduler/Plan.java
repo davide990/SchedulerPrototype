@@ -2,6 +2,12 @@ package org.lip6.scheduler;
 
 import java.util.List;
 
+/**
+ * The plan interface.
+ * 
+ * @author <a href="mailto:davide-andrea.guastella@lip6.fr">Davide Andrea
+ *         Guastella</a>
+ */
 public interface Plan {
 	/**
 	 * Add a task to this plan.<br/>
@@ -20,11 +26,11 @@ public interface Plan {
 	List<Integer> getSuccessors();
 
 	void addSuccessor(int ID);
-	
+
 	void addSyncTask(int ID);
-	
+
 	boolean hasSyncTask();
-	
+
 	List<Task> getSyncTasks();
 
 	void removeSuccessor(int ID);

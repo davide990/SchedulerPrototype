@@ -9,25 +9,27 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.PriorityQueue;
-import java.util.Queue;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-import org.apache.commons.collections4.list.TreeList;
 import org.lip6.scheduler.utils.Utils;
 
 /**
  * A schedule represents a solution for the scheduling problem.
  * 
  * 
- * @author davide
+ * @author <a href="mailto:davide-andrea.guastella@lip6.fr">Davide Andrea
+ *         Guastella</a>
  *
  */
 public class Schedule implements Cloneable {
-
-	// private final int numResources;
+	/**
+	 * The left bound W<sub>s</sub> of the time window W.
+	 */
 	private final int WStart;
+	/**
+	 * The right bound W<sub>e</sub> of the time window W.
+	 */
 	private final int WEnd;
 
 	/**
@@ -45,13 +47,13 @@ public class Schedule implements Cloneable {
 	 * times.<br/>
 	 * Recall that each TaskSchedule actually represents a starting time for a
 	 * scheduled task, together with other useful informations used, for
-	 * example, for rendering tasks in the web interface.
-	 * 
+	 * example, for rendering tasks in the web interface. <br/>
 	 * Why a TreeSet? Because it provides guaranteed log(n) time cost for the
-	 * basic operations (add, remove and contains). Also, it lets to specify a
-	 * comparator to keep the set sorted after insertion/removal operations.
+	 * basic operations (add, remove and contains). Also, it lets to <b>specify
+	 * a comparator to keep the set sorted after insertion/removal
+	 * operations</b> (with TreeList this is not possible).
 	 */
-	private final TreeSet<TaskSchedule> schedule;	
+	private final TreeSet<TaskSchedule> schedule;
 
 	private Schedule(int wStart, int wEnd) {
 		// this.numResources = numResources;
@@ -68,7 +70,7 @@ public class Schedule implements Cloneable {
 	}
 
 	/**
-	 * Get an instance of Schedule
+	 * Static factory method for Schedule class.
 	 * 
 	 * @param numResources
 	 * @param WStart
@@ -114,15 +116,16 @@ public class Schedule implements Cloneable {
 	}
 
 	/**
-	 * Get the accomplishment time (proc. time + starting time) for the
-	 * specified task
+	 * Get the completion time
+	 * (p<sup>k</sup><sub>i</sub>+s<sup>k</sup><sub>i</sub>) for the task
+	 * J<sup>k</sup><sub>i</sub> specified in input.
 	 */
-	public int getAccomplishmentTime(int planID, int taskID) {
+	public int getCompletionTime(int planID, int taskID) {
 		// Find the corresponding task assignment
 		Optional<TaskSchedule> s = schedule.stream()
 				.filter(x -> ((Task) x.getTask()).getPlanID() == planID && x.getTask().getID() == taskID).findFirst();
 
-		// if the task has been scheduled, get its accomplishment time
+		// if the task has been scheduled, get its completion time
 		if (s.isPresent()) {
 			return s.get().getStartingTime() + ((Task) s.get().getTask()).getProcessingTime();
 		}
@@ -136,6 +139,7 @@ public class Schedule implements Cloneable {
 	 * Add the task t to this schedule to the given starting time.
 	 * 
 	 * @param startingTime
+	 *            the starting time s<sup>k</sup><sub>i</sub> for the task t
 	 * @param t
 	 */
 	public void addTask(int startingTime, final Task task) {
@@ -145,7 +149,7 @@ public class Schedule implements Cloneable {
 			throw new IllegalArgumentException("Starting time can not be <= 0");
 		}
 		// Create a new task assignment for task t at starting time startingTime
-		TaskSchedule s = new TaskSchedule(task, startingTime, task.getResourceID());
+		TaskSchedule s = new TaskSchedule(task, startingTime, task.getResourcesID());
 		schedule.add(s);
 
 		// Keep the ID of the plan which contains t
@@ -155,18 +159,20 @@ public class Schedule implements Cloneable {
 
 		// Keep the task t as the last task assigned for the resource at which
 		// it refers.
-		lastTaskForResource.put(task.getResourceID(), s);
+		for (Integer res : task.getResourcesID()) {
+			lastTaskForResource.put(res, s);
+		}
 	}
 
 	/**
-	 * Returns the accomplishment date of the last task allocated for the given
-	 * resource, or WStart if there's no task allocated for it.
+	 * Returns the completion time of the last task allocated in the specified
+	 * resource, or W<sub>s</sub> if there's no task allocated for it.
 	 * 
 	 * @param resource
 	 *            the ID of the resource
 	 * @return
 	 */
-	public int getAccomplishmentForLastTaskIn(int resource) {
+	public int getCompletionTimeForLastTaskIn(int resource) {
 		// If a task has been already scheduled for a given resource
 		if (lastTaskForResource.containsKey(resource)) {
 			TaskSchedule s = lastTaskForResource.get(resource);
@@ -190,12 +196,13 @@ public class Schedule implements Cloneable {
 		// latest allocated task for resource
 		schedule.forEach(x -> {
 			if (!lastTaskForResource.containsKey(x.getResource())) {
-				lastTaskForResource.put(x.getResource(), x);
+				x.getResource().forEach(res -> lastTaskForResource.put(res, x));
 			} else {
 				int lastAccomplishmentDate = lastTaskForResource.get(x.getResource()).getStartingTime()
 						+ ((Task) lastTaskForResource.get(x.getResource()).getTask()).getProcessingTime();
 				if (x.getStartingTime() + ((Task) x.getTask()).getProcessingTime() >= lastAccomplishmentDate) {
-					lastTaskForResource.put(x.getResource(), x);
+
+					x.getResource().forEach(res -> lastTaskForResource.put(res, x));
 				}
 			}
 		});

@@ -29,10 +29,10 @@ public class EventUtils {
 	public static Optional<Event> getLastEventWhereTerminates(Task t, NavigableSet<Event> events) {
 
 		List<Event> vv = events.stream().filter(x -> x.taskTerminatingHere().contains(t)).collect(Collectors.toList());
-		OptionalInt max = vv.stream().mapToInt(x -> x.getTime()).max();
+		OptionalInt max = vv.stream().mapToInt(x -> x.getTimeInstant()).max();
 
 		if (max.isPresent()) {
-			return events.stream().filter(x -> x.getTime() == max.getAsInt()).findFirst();
+			return events.stream().filter(x -> x.getTimeInstant() == max.getAsInt()).findFirst();
 		}
 		return Optional.empty();
 	}
@@ -45,7 +45,7 @@ public class EventUtils {
 	 * @return
 	 */
 	public List<Event> executedAfter(int t, NavigableSet<Event> events) {
-		return events.stream().filter(x -> x.getTime() > t).collect(Collectors.toList());
+		return events.stream().filter(x -> x.getTimeInstant() > t).collect(Collectors.toList());
 	}
 
 	/**
@@ -56,7 +56,7 @@ public class EventUtils {
 	 * @return
 	 */
 	public static Optional<Event> getLastEvent(int We, NavigableSet<Event> events) {
-		return events.stream().filter(x -> x.getTime() == We).findFirst();
+		return events.stream().filter(x -> x.getTimeInstant() == We).findFirst();
 	}
 
 	public static Optional<Event> getNextEvent(Event v, NavigableSet<Event> events) {
@@ -71,8 +71,8 @@ public class EventUtils {
 	public static Optional<Event> getNextEventForResource(int resourceID, Event v, NavigableSet<Event> events) {
 		try {
 			return events.stream()
-					.filter(x -> x.getTime() > v.getTime() && x.taskStartingHere().stream()
-							.filter(t -> t.getResourceID() == resourceID).findAny().isPresent())
+					.filter(x -> x.getTimeInstant() > v.getTimeInstant() && x.taskStartingHere().stream()
+							.filter(t -> t.getResourcesID().contains(resourceID)).findAny().isPresent())
 					.min(Event.getComparator());
 		} catch (NoSuchElementException ex) {
 			return Optional.empty();

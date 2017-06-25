@@ -1,5 +1,7 @@
 package org.lip6.scheduler;
 
+import java.util.List;
+
 /**
  * A TaskSchedule represents the assignment of a starting time s<sub>k</sub> to
  * a task. <br/>
@@ -12,21 +14,21 @@ package org.lip6.scheduler;
 public class TaskSchedule implements Cloneable {
 	private final Task task;
 	private final int startingTime;
-	private final int resource;
+	private final List<Integer> resources;
 
-	public TaskSchedule(Task task, int startingTime, int resource) {
+	public TaskSchedule(Task task, int startingTime, List<Integer> resources) {
 		if (!(task instanceof Task)) {
 			throw new IllegalArgumentException("Argument is not a task");
 		}
 
 		this.task = task;
 		this.startingTime = startingTime;
-		this.resource = resource;
+		this.resources = resources;
 	}
 
 	@Override
 	protected Object clone() throws CloneNotSupportedException {
-		return new TaskSchedule((Task) task.clone(), startingTime, resource);
+		return new TaskSchedule((Task) task.clone(), startingTime, resources);
 	}
 
 	public Task getTask() {
@@ -37,8 +39,8 @@ public class TaskSchedule implements Cloneable {
 		return startingTime;
 	}
 
-	public int getResource() {
-		return resource;
+	public List<Integer> getResource() {
+		return resources;
 	}
 
 	@Override
