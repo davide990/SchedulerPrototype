@@ -601,7 +601,7 @@ public class Scheduler {
 		}
 
 		// If the constraints are not met, the plan is not schedulable
-		if (/* !resourceTest || */!checkConstraints(t, e.getTimeInstant(), s.getWStart(), s.getWEnd())) {
+		if (!checkConstraints(t, e.getTimeInstant(), s.getWStart(), s.getWEnd())) {
 			events.forEach(ev -> ev.removePlan(t.getPlanID()));
 			return false;
 		}
