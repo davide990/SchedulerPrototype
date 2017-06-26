@@ -50,11 +50,11 @@ public class Scheduler {
 	/**
 	 * The set of scheduled plans.
 	 */
-	private Set<Plan> scheduledPlans;
+	private List<Plan> scheduledPlans;
 	/**
 	 * The set of unscheduled plans.
 	 */
-	private Set<Plan> unscheduledPlans;
+	private List<Plan> unscheduledPlans;
 	/**
 	 * The set of events
 	 */
@@ -81,8 +81,8 @@ public class Scheduler {
 	private Scheduler() {
 		listener = Optional.empty();
 		plans = new HashSet<>();
-		scheduledPlans = new HashSet<>();
-		unscheduledPlans = new HashSet<>();
+		scheduledPlans = new TreeList<>();
+		unscheduledPlans = new TreeList<>();
 		resourcesIDs = new HashSet<>();
 		events = new TreeSet<>(Event.getComparator());
 		calculateOptimalWe = false;
@@ -204,8 +204,8 @@ public class Scheduler {
 	 * 
 	 * @return
 	 */
-	public Set<Plan> getScheduledPlans() {
-		return Collections.unmodifiableSet(scheduledPlans);
+	public List<Plan> getScheduledPlans() {
+		return Collections.unmodifiableList(scheduledPlans);
 	}
 
 	/**
@@ -214,8 +214,8 @@ public class Scheduler {
 	 * 
 	 * @return
 	 */
-	public Set<Plan> getUnscheduledPlans() {
-		return Collections.unmodifiableSet(unscheduledPlans);
+	public List<Plan> getUnscheduledPlans() {
+		return Collections.unmodifiableList(unscheduledPlans);
 	}
 
 	/**
@@ -280,7 +280,8 @@ public class Scheduler {
 		// Create a copy of the set of plans to schedule
 		// --
 		// TreeList for fast add/remove operations! Why not an HashSet? Because
-		// with Set collection the order of elements is not guarantee.
+		// with Set collection the order of elements is not guarantee. Moreover,
+		// we can suppose to have duplicate plans.
 		List<Plan> plansInput = new TreeList<>(plans);
 
 		// Sort the plans according to the precedences (if any), and also
