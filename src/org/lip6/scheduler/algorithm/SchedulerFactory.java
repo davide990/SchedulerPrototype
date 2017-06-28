@@ -3,11 +3,11 @@ package org.lip6.scheduler.algorithm;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.ParseException;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.BiFunction;
 
+import org.apache.commons.collections4.list.TreeList;
 import org.lip6.scheduler.Plan;
 import org.lip6.scheduler.utils.CSVParser;
 
@@ -30,8 +30,7 @@ public class SchedulerFactory {
 			e.printStackTrace();
 		}
 
-		Set<Plan> plans = new HashSet<>(p.values());
-
+		List<Plan> plans = new TreeList<>(p.values());
 		return Scheduler.get(maxResourceCapacity, plans, WStart, WEnd);
 	}
 
@@ -43,11 +42,9 @@ public class SchedulerFactory {
 			System.err.println("Error while processing input stream.\n" + e);
 			return null;
 		}
-		Set<Plan> plans = new HashSet<>(p.values());
+		List<Plan> plans = new TreeList<>(p.values());
 
-		
-		
-		//!!!!!!!!!!!
+		// !!!!!!!!!!!
 		plans.forEach(x -> {
 			x.getTasks().forEach(t -> {
 				t.setProcessingTimeFunction(new BiFunction<Integer, Integer, Integer>() {
@@ -62,7 +59,7 @@ public class SchedulerFactory {
 		return Scheduler.get(maxResourceCapacity, plans, WStart, WEnd);
 	}
 
-	public static Scheduler get(int maxResourceCapacity, int WStart, int WEnd, Set<Plan> plans) {
+	public static Scheduler get(int maxResourceCapacity, int WStart, int WEnd, List<Plan> plans) {
 		return Scheduler.get(maxResourceCapacity, plans, WStart, WEnd);
 	}
 }

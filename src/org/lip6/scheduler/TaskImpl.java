@@ -3,17 +3,17 @@ package org.lip6.scheduler;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 
 	final int taskID;
 	final int planID;
 	final String planName;
-	final List<Integer> resourceIDs;
-	final int resourceUsage;
 	final int releaseTime;
 	final int dueDate;
 
@@ -23,53 +23,45 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 	final int planPriority;
 	final List<Integer> predecessors;
 	final List<Integer> successors;
+	final Map<Integer, Integer> resourceUsages;
+	final int timeLag;
 
-	TaskImpl(int taskID, int planID, List<Integer> resourceIDs, int resourceUsage, int releaseTime, int dueDate,
+	TaskImpl(int taskID, int planID, Map<Integer, Integer> resourceUsages, int timeLag, int releaseTime, int dueDate,
 			int processingTime, int planPriority, List<Integer> predecessors) {
 		this.taskID = taskID;
 		this.planID = planID;
-		this.resourceUsage = resourceUsage;
+		this.resourceUsages = resourceUsages;
 		this.releaseTime = releaseTime;
 		this.dueDate = dueDate;
 		this.processingTime = processingTime;
 		this.planPriority = planPriority;
-		this.resourceIDs = new ArrayList<>(resourceIDs);
 		this.predecessors = new ArrayList<>(predecessors);
 		this.successors = new ArrayList<>();
+		this.timeLag = timeLag;
 		this.planName = "";
 		processingTimeFunction = Optional.empty();
 	}
 
-	TaskImpl(int taskID, int planID, String planName, List<Integer> resourceIDs, int resourceUsage, int releaseTime, int dueDate,
-			int processingTime, int planPriority, List<Integer> predecessors) {
+	TaskImpl(int taskID, int planID, String planName, Map<Integer, Integer> resourceUsages, int timeLag,
+			int releaseTime, int dueDate, int processingTime, int planPriority, List<Integer> predecessors) {
 		this.taskID = taskID;
 		this.planID = planID;
-		this.resourceUsage = resourceUsage;
+		this.resourceUsages = resourceUsages;
 		this.releaseTime = releaseTime;
 		this.dueDate = dueDate;
 		this.processingTime = processingTime;
 		this.planPriority = planPriority;
-		this.resourceIDs = new ArrayList<>(resourceIDs);
 		this.predecessors = new ArrayList<>(predecessors);
 		this.successors = new ArrayList<>();
 		this.planName = planName;
+		this.timeLag = timeLag;
 		processingTimeFunction = Optional.empty();
 	}
 
 	@Override
 	public Object clone() {
-		return TaskFactory.getTask(taskID, planID, planName, resourceIDs, resourceUsage, releaseTime, dueDate,
+		return TaskFactory.getTask(taskID, planID, planName, resourceUsages, timeLag, releaseTime, dueDate,
 				processingTime, planPriority, predecessors);
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see org.lip6.scheduler.Task#getResourceID()
-	 */
-	@Override
-	public List<Integer> getResourcesID() {
-		return resourceIDs;
 	}
 
 	/*
@@ -83,8 +75,8 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 	}
 
 	@Override
-	public int getResourceUsage() {
-		return resourceUsage;
+	public Map<Integer, Integer> getResourceUsages() {
+		return resourceUsages;
 	}
 
 	/*
@@ -240,6 +232,21 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 				+ getPlanID() + "</sup><sub style='position: relative; left: -.5em;'>" + getID()
 				+ "</sub></p></center></body></html>";
 
+	}
+
+	@Override
+	public List<Integer> getResourcesID() {
+		return resourceUsages.keySet().stream().collect(Collectors.toList());
+	}
+
+	@Override
+	public int getResourceUsage(int resource) {
+		return resourceUsages.getOrDefault(resource, 1);
+	}
+
+	@Override
+	public int getLag() {
+		return timeLag;
 	}
 
 }

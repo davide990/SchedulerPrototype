@@ -42,7 +42,7 @@ public class Scheduler {
 	/**
 	 * The set of <b>all</b> plans.
 	 */
-	private Set<Plan> plans;
+	private List<Plan> plans;
 	/**
 	 * The IDs of all the resources employed by the plans.
 	 */
@@ -80,7 +80,7 @@ public class Scheduler {
 	 */
 	private Scheduler() {
 		listener = Optional.empty();
-		plans = new HashSet<>();
+		plans = new TreeList<>();
 		scheduledPlans = new TreeList<>();
 		unscheduledPlans = new TreeList<>();
 		resourcesIDs = new HashSet<>();
@@ -105,7 +105,7 @@ public class Scheduler {
 	 *            solution</b> is constructed
 	 * @return
 	 */
-	public static Scheduler get(final int maxResourceCapacity, Set<Plan> plans, int wStart, int wEnd,
+	public static Scheduler get(final int maxResourceCapacity, List<Plan> plans, int wStart, int wEnd,
 			SchedulerListener listener) {
 		Scheduler scheduler = get(maxResourceCapacity, plans, wStart, wEnd);
 		scheduler.listener = Optional.of(listener);
@@ -134,7 +134,7 @@ public class Scheduler {
 	 *            the final time of the temporal window
 	 * @return
 	 */
-	public static Scheduler get(final int maxResourceCapacity, Set<Plan> plans, int wStart, int wEnd) {
+	public static Scheduler get(final int maxResourceCapacity, List<Plan> plans, int wStart, int wEnd) {
 		// Check if the resource capacity value is > 0
 		Utils.requireValidBounds(maxResourceCapacity, 1, Integer.MAX_VALUE,
 				"Maximum resource capacity must be a positive integer value.");
@@ -194,8 +194,8 @@ public class Scheduler {
 	 * 
 	 * @return
 	 */
-	public Set<Plan> getPlans() {
-		return Collections.unmodifiableSet(plans);
+	public List<Plan> getPlans() {
+		return Collections.unmodifiableList(plans);
 	}
 
 	/**
@@ -582,7 +582,7 @@ public class Scheduler {
 			// Do the capacity test
 			resourceTest = true;
 			for (Integer resID : resources) {
-				if (f.getResourceCapacity(resID) + t.getResourceUsage() > maxResourceCapacity) {
+				if (f.getResourceCapacity(resID) + t.getResourceUsage(resID) > maxResourceCapacity) {
 					resourceTest = false;
 					break;
 				}
@@ -697,7 +697,7 @@ public class Scheduler {
 			}
 		}
 
-		return Math.max(maxTime, Ws);
+		return Math.max(maxTime + t.getLag(), Ws);
 	}
 
 	private static Comparator<Plan> PLAN_PRIORITY_COMPARATOR = new Comparator<Plan>() {

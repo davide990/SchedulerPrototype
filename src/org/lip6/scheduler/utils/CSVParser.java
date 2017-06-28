@@ -13,6 +13,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 
 import org.apache.commons.csv.CSVFormat;
@@ -24,7 +26,7 @@ import org.lip6.scheduler.Task;
 import org.lip6.scheduler.TaskFactory;
 
 /**
- * Utility class for (de)serialize CSV files containing the plans.
+ * Utility class for (de)serialize CSV files describing the plans.
  * 
  * @author <a href="mailto:davide-andrea.guastella@lip6.fr">Davide Andrea
  *         Guastella</a>
@@ -32,7 +34,7 @@ import org.lip6.scheduler.TaskFactory;
 public class CSVParser {
 
 	private enum csvHeaders {
-		taskID, planID, planName, planPriority, resourceID, resourceUsage, releaseTime, dueDate, processingTime, planSuccessors, syncTasks, taskPredecessors
+		taskID, planID, planName, planPriority, resourceUsage, releaseTime, dueDate, processingTime, planSuccessors, lag, syncTasks, taskPredecessors
 	}
 
 	public static Map<Integer, Plan> parse(InputStream inputStream) throws IOException, ParseException {
@@ -59,11 +61,15 @@ public class CSVParser {
 			String planName = record.get("planName");
 			int planPriority = Integer.parseInt(record.get("planPriority"));
 			int taskID = Integer.parseInt(record.get("taskID"));
-			List<Integer> resourceID = parseList(record.get("resourceID"));
-
-			// Assign 1 as default resource usage
 			String ru = record.get("resourceUsage");
-			int resourceUsage = Integer.parseInt(ru.equals("") ? "1" : ru);
+			Map<Integer, Integer> resourceUsages = parseResourceUsages(ru);
+
+			String lagStr = record.get("lag");
+
+			int timeLag = 0;
+			if (!lagStr.equals("")) {
+				timeLag = Integer.parseInt(lagStr);
+			}
 
 			int releaseTime = Integer.parseInt(record.get("releaseTime"));
 			int dueDate = Integer.parseInt(record.get("dueDate"));
@@ -76,7 +82,7 @@ public class CSVParser {
 			plans.putIfAbsent(planID, PlanImpl.get(planID, planName, planPriority, planSuccessors, syncTasks));
 
 			// Add the task to the plans' map
-			plans.get(planID).addTask(TaskFactory.getTask(taskID, planID, planName, resourceID, resourceUsage,
+			plans.get(planID).addTask(TaskFactory.getTask(taskID, planID, planName, resourceUsages, timeLag,
 					releaseTime, dueDate, processingTime, planPriority, taskPredecessors));
 		}
 
@@ -98,6 +104,42 @@ public class CSVParser {
 				t.forEach(tt -> task.addSuccessor(tt.getID()));
 			}
 		}
+	}
+
+	/**
+	 * Parse the resource usages string
+	 * 
+	 * @param list
+	 */
+	private static Map<Integer, Integer> parseResourceUsages(String list) {
+		List<String> usagesParResource = Arrays.asList(list.trim().split(";")).stream().collect(Collectors.toList());
+		Map<Integer, Integer> usageMap = new HashMap<>();
+
+		for (String ru : usagesParResource) {
+			try {
+				// Try to parse the current string as 'f(x)'
+				String[] parts = ru.split("[\\(\\)]");
+				if (parts.length != 2) {
+					throw new PatternSyntaxException(ru, ru, 0);
+				}
+				int res = Integer.parseInt(parts[0]);
+				int usage = Integer.parseInt(parts[1]);
+
+				usageMap.putIfAbsent(res, usage);
+			} catch (PatternSyntaxException e) {
+				// Resource usage string is not in the form f(x). Trying to
+				// parse as normal number (so the number is parsed as the
+				// resource ID, and usage is fixed to 1)
+				try {
+					int res = Integer.parseInt(ru);
+					usageMap.putIfAbsent(res, 1);
+
+				} catch (NumberFormatException ex) {
+					throw new IllegalArgumentException("Malformed resource usage string.");
+				}
+			}
+		}
+		return usageMap;
 	}
 
 	/**

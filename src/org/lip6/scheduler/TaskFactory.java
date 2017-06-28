@@ -1,12 +1,14 @@
 package org.lip6.scheduler;
 
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
 
 public class TaskFactory {
 
-	public static Task getTask(int taskID, int planID, String planName, List<Integer> resourceIDs, int resourceUsage,
-			int releaseTime, int dueDate, int processingTime, int planPriority, List<Integer> predecessors) {
+	public static Task getTask(int taskID, int planID, String planName, Map<Integer, Integer> resourceUsages,
+			int timeLag, int releaseTime, int dueDate, int processingTime, int planPriority,
+			List<Integer> predecessors) {
 
 		if (processingTime <= 0) {
 			throw new IllegalArgumentException("Processing time must be >= 0.");
@@ -23,13 +25,13 @@ public class TaskFactory {
 			throw new IllegalArgumentException("Predecessor list can not contains the same ID of the task to create");
 		}
 
-		return new TaskImpl(taskID, planID, planName, resourceIDs, resourceUsage, releaseTime, dueDate, processingTime,
+		return new TaskImpl(taskID, planID, planName, resourceUsages, timeLag, releaseTime, dueDate, processingTime,
 				planPriority, predecessors);
 	}
 
-	public static Task getTask(int taskID, int planID, String planName, List<Integer> resourceIDs, int resourceUsage,
-			int releaseTime, int dueDate, int processingTime, int planPriority, List<Integer> predecessors,
-			BiFunction<Integer, Integer, Integer> processingTimeFunction) {
+	public static Task getTask(int taskID, int planID, String planName, Map<Integer, Integer> resourceUsages,
+			int timeLag, int releaseTime, int dueDate, int processingTime, int planPriority,
+			List<Integer> predecessors, BiFunction<Integer, Integer, Integer> processingTimeFunction) {
 
 		if (processingTime <= 0) {
 			throw new IllegalArgumentException("Processing time must be >= 0.");
@@ -46,7 +48,7 @@ public class TaskFactory {
 			throw new IllegalArgumentException("Predecessor list can not contains the same ID of the task to create");
 		}
 
-		Task task = new TaskImpl(taskID, planID, planName, resourceIDs, resourceUsage, releaseTime, dueDate,
+		Task task = new TaskImpl(taskID, planID, planName, resourceUsages, timeLag, releaseTime, dueDate,
 				processingTime, planPriority, predecessors);
 
 		task.setProcessingTimeFunction(processingTimeFunction);

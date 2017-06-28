@@ -1,13 +1,18 @@
 package org.lip6.scheduler;
 
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
 
 public interface Task {
 
 	List<Integer> getResourcesID();
-	
-	int getResourceUsage();
+
+	Map<Integer, Integer> getResourceUsages();
+
+	int getResourceUsage(int resource);
+
+	int getLag();
 
 	int getID();
 
@@ -53,7 +58,7 @@ public interface Task {
 	void addSuccessor(int taskID);
 
 	String toHTMLString();
-	
+
 	String toHTMLString(boolean printPlanName);
 
 	String toHTMLString(String textColor);
