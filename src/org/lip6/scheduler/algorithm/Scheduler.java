@@ -272,8 +272,7 @@ public class Scheduler {
 		Schedule lastFeasibleSolution = Schedule.get(wStart, wEnd);
 
 		if (plans.isEmpty()) {
-			// System.err.println("Warning: No plan to schedule. Return an empty
-			// solution.");
+			System.err.println("Warning: No plan to schedule. ");
 			return workingSolution;
 		}
 
@@ -288,30 +287,15 @@ public class Scheduler {
 		// according to their priority value
 		plansInput = sortPlans(plansInput.stream().map(x -> (ExecutableNode) x).collect(Collectors.toList()));
 
-		// Create a map containing, for each priority as key value, a list of
-		// plans having each one the priority value as key. This is used later
-		// to schedule plans that have the same priority value.
-		Map<Integer, Integer> prioritiesCountMap = new HashMap<>();
-
 		// Why a TreeList here? Because it provides better performance in
 		// add/remove operations compared to ArrayList. Add/remove operations
 		// takes
 		// O(log n) time with a TreeList.
 		Map<Integer, TreeList<Plan>> plansWithSamePriority = new HashMap<>();
 		plansInput.forEach(x -> {
-			if (!prioritiesCountMap.containsKey(x.getPriority())) {
-				prioritiesCountMap.put(x.getPriority(), 1);
-			} else {
-				int newVal = prioritiesCountMap.get(x.getPriority()) + 1;
-				prioritiesCountMap.put(x.getPriority(), newVal);
+			plansWithSamePriority.putIfAbsent(x.getPriority(), new TreeList<>());
+			plansWithSamePriority.get(x.getPriority()).add(x);
 
-				if (newVal > 1) {
-					if (!plansWithSamePriority.containsKey(x.getPriority())) {
-						plansWithSamePriority.put(x.getPriority(), new TreeList<>());
-					}
-					plansWithSamePriority.get(x.getPriority()).add(x);
-				}
-			}
 		});
 
 		// Main loop. Iterate until there is some plan left to schedule
@@ -323,16 +307,14 @@ public class Scheduler {
 				continue;
 			}
 
-			// System.err.println("Scheduling plan #" +
-			// Integer.toString(pk.getID()));
-
 			// If pk is the only, in the plan set, to have its priority value,
 			// then proceed by scheduling it
-			if (prioritiesCountMap.get(pk.getPriority()) == 1) {
+			if (plansWithSamePriority.get(pk.getPriority()).size() == 1) {
 				// Schedule pk
 				boolean scheduled = schedulePlan(pk, workingSolution, events, maxResourceCapacity);
 				// If pk has been scheduled
 				if (scheduled) {
+
 					// Add to the set of scheduled plans
 					scheduledPlans.add(pk);
 					try {
@@ -346,13 +328,7 @@ public class Scheduler {
 					if (listener.isPresent()) {
 						listener.get().solutionGenerated(lastFeasibleSolution);
 					}
-				} else {
-					// If pk has not been scheduled, add to the set of
-					// unscheduled plans
-					unscheduledPlans.add(pk);
 				}
-				// Remove the key/value pair from the map of priorities
-				prioritiesCountMap.remove(pk.getPriority());
 			} else {
 				// Get all the plans that have the same priority as the plan to
 				// schedule
@@ -371,8 +347,6 @@ public class Scheduler {
 					workingSolution.unSchedule(toRemove);
 				}
 
-				unscheduled.forEach(x -> prioritiesCountMap.remove(x.getPriority()));
-				unscheduledPlans.addAll(unscheduled);
 				plansWithSamePriority.remove(pk.getPriority());
 				try {
 					lastFeasibleSolution = (Schedule) workingSolution.clone();
@@ -397,8 +371,11 @@ public class Scheduler {
 			}
 		}
 
-		events.forEach(x -> System.err.println(x));
+		//events.forEach(x -> System.err.println(x));
 
+		unscheduledPlans = new TreeList<>(plans);
+		unscheduledPlans.removeAll(scheduledPlans);
+				
 		return lastFeasibleSolution;
 	}
 
@@ -472,6 +449,7 @@ public class Scheduler {
 						bestIdleTime = idleTime;
 					}
 				} else {
+					// p has not been scheduled correctly.
 					toDelete = Optional.of(p);
 				}
 			}
@@ -515,6 +493,7 @@ public class Scheduler {
 				break;
 			}
 		}
+
 		// At this point, each task of pk has been scheduled
 		if (pk.isSchedulable()) {
 			return true;
@@ -526,14 +505,15 @@ public class Scheduler {
 			workingSolution.unSchedule(toRemove);
 			return false;
 		}
+
 	}
 
 	/**
-	 * <b>ALGORITHM 4</b> Schedule the task t <br/>
+	 * <b>ALGORITHM 4</b> Schedule the task <i>t</i> into the schedule <i>s</i>
+	 * <br/>
 	 * <br/>
 	 * This algorithm tries to find an event <i>e</i> such that the task
-	 * <i>t</i> could be scheduled exactly at <i>t(e)</i> and also on
-	 * <b>different resources.</b>
+	 * <i>t</i> could be scheduled exactly at <i>t(e)</i>.
 	 * 
 	 * @param maxResourceCapacity
 	 * @param s
@@ -553,7 +533,7 @@ public class Scheduler {
 
 		// Calculate the earliest starting time for the task
 		int sk = getInitialStartingTime(s.getWStart(), events, t);
-		Event e = getPreviousEvent(sk, events);
+		Event e = getEvent(sk, events);
 		if (!events.contains(e)) {
 			events.add(e);
 		}
@@ -565,7 +545,6 @@ public class Scheduler {
 		try {
 			lastEvent = EventUtils.getLastEvent(s.getWEnd(), events).get();
 		} catch (NoSuchElementException ex) {
-			// System.err.println("Error: no final event found.");
 			return false;
 		}
 
@@ -648,9 +627,8 @@ public class Scheduler {
 	}
 
 	/**
-	 * Get the latest event <i>e</i> that precedes <i>s<sub>k</sub></i> and
-	 * contains in <i>C(e)</i> a task scheduled in the same resource as the task
-	 * <i>t</i> given in input
+	 * Get the event <i>e</i> in the event list such that t(e) = s<sub>k</sub>.
+	 * If such event does not exists, it is created.
 	 * 
 	 * @param t
 	 * @param sk
@@ -658,7 +636,7 @@ public class Scheduler {
 	 * @param events
 	 * @return
 	 */
-	private Event getPreviousEvent(int sk, final NavigableSet<Event> events) {
+	private Event getEvent(int sk, final NavigableSet<Event> events) {
 		Optional<Event> ev = events.stream().filter(e -> e.getTimeInstant() == sk).findFirst();
 
 		if (ev.isPresent()) {
@@ -666,6 +644,8 @@ public class Scheduler {
 		} else {
 			Event event = Event.get(sk, resourcesIDs);
 
+			// Once a new event has been created at sk, the resource usage must
+			// be fixed according to its predecessor events.
 			Event predf = EventUtils.getPreviousEvent(event, events).get();
 			event.setResourceCapacities(predf.resourceUsages());
 

@@ -3,15 +3,14 @@ package org.lip6.scheduler;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.list.TreeList;
 import org.lip6.scheduler.utils.Utils;
 
 /**
@@ -53,7 +52,7 @@ public class Schedule implements Cloneable {
 	 * a comparator to keep the set sorted after insertion/removal
 	 * operations</b> (with TreeList this is not possible).
 	 */
-	private final TreeSet<TaskSchedule> schedule;
+	private final TreeList<TaskSchedule> schedule;
 
 	private Schedule(int wStart, int wEnd) {
 		// this.numResources = numResources;
@@ -61,12 +60,14 @@ public class Schedule implements Cloneable {
 		WEnd = wEnd;
 		plans = new ArrayList<>();
 		lastTaskForResource = new HashMap<>();
-		schedule = new TreeSet<>(new Comparator<TaskSchedule>() {
-			@Override
-			public int compare(TaskSchedule o1, TaskSchedule o2) {
-				return Integer.compare(o1.getStartingTime(), o2.getStartingTime());
-			}
-		});
+		schedule = new TreeList<>();
+		/*
+		 * schedule = new TreeSet<>(new Comparator<TaskSchedule>() {
+		 * 
+		 * @Override public int compare(TaskSchedule o1, TaskSchedule o2) {
+		 * return Integer.compare(o1.getStartingTime(), o2.getStartingTime()); }
+		 * });
+		 */
 	}
 
 	/**
@@ -143,14 +144,14 @@ public class Schedule implements Cloneable {
 	 * @param t
 	 */
 	public void addTask(int startingTime, final Task task) {
+		Utils.requireValidBounds(startingTime, 0, Integer.MAX_VALUE, "Starting time can not be negative");
 		Objects.requireNonNull(task, "Task cannot be null");
 
-		if (startingTime <= 0) {
-			throw new IllegalArgumentException("Starting time can not be <= 0");
-		}
 		// Create a new task assignment for task t at starting time startingTime
 		TaskSchedule s = new TaskSchedule(task, startingTime, task.getResourcesID());
-		schedule.add(s);
+		if (!schedule.add(s)) {
+			throw new RuntimeException("Cannot insert " + task + " to schedule.");
+		}
 
 		// Keep the ID of the plan which contains t
 		if (!plans.contains(task.getPlanID())) {
@@ -182,8 +183,13 @@ public class Schedule implements Cloneable {
 		return WStart;
 	}
 
+	/**
+	 * Return a read-only list containing the current schedules.
+	 * 
+	 * @return
+	 */
 	public List<TaskSchedule> taskSchedules() {
-		return Collections.unmodifiableList(new ArrayList<>(schedule));
+		return Collections.unmodifiableList(new TreeList<>(schedule));
 	}
 
 	public void unSchedule(Collection<TaskSchedule> collection) {

@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.text.ParseException;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
 
 import org.apache.commons.collections4.list.TreeList;
 import org.lip6.scheduler.Plan;
@@ -43,18 +42,6 @@ public class SchedulerFactory {
 			return null;
 		}
 		List<Plan> plans = new TreeList<>(p.values());
-
-		// !!!!!!!!!!!
-		plans.forEach(x -> {
-			x.getTasks().forEach(t -> {
-				t.setProcessingTimeFunction(new BiFunction<Integer, Integer, Integer>() {
-					@Override
-					public Integer apply(Integer currentTimeInstant, Integer processingTime) {
-						return Math.max(0, processingTime - 1);
-					}
-				});
-			});
-		});
 
 		return Scheduler.get(maxResourceCapacity, plans, WStart, WEnd);
 	}

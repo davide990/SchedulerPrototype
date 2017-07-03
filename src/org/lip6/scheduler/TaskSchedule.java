@@ -11,7 +11,7 @@ import java.util.List;
  * @author davide
  *
  */
-public class TaskSchedule implements Cloneable {
+public class TaskSchedule implements Comparable<TaskSchedule>, Cloneable {
 	private final Task task;
 	private final int startingTime;
 	private final List<Integer> resources;
@@ -63,9 +63,16 @@ public class TaskSchedule implements Cloneable {
 		if (task == null) {
 			if (other.task != null)
 				return false;
-		} else if (!task.equals(other.task))
+		} // else if (!task.equals(other.task))
+		else if (!(task.getID() == other.task.getID() && task.getPlanID() == other.task.getPlanID()))
 			return false;
 		return true;
+	}
+
+	@Override
+	public int compareTo(TaskSchedule other) {
+		boolean equal = task.getID() == other.task.getID() && task.getPlanID() == other.task.getPlanID();
+		return equal ? 0 : -1;
 	}
 
 }

@@ -13,7 +13,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.NoSuchElementException;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 
@@ -25,6 +25,9 @@ import org.lip6.scheduler.PlanImpl;
 import org.lip6.scheduler.Task;
 import org.lip6.scheduler.TaskFactory;
 
+import net.objecthunter.exp4j.Expression;
+import net.objecthunter.exp4j.ExpressionBuilder;
+
 /**
  * Utility class for (de)serialize CSV files describing the plans.
  * 
@@ -35,6 +38,10 @@ public class CSVParser {
 
 	private enum csvHeaders {
 		taskID, planID, planName, planPriority, resourceUsage, releaseTime, dueDate, processingTime, planSuccessors, lag, syncTasks, taskPredecessors
+	}
+
+	private enum distanceFunctionCsvHeaders {
+		taskID, planID, function, dt
 	}
 
 	public static Map<Integer, Plan> parse(InputStream inputStream) throws IOException, ParseException {
@@ -88,6 +95,131 @@ public class CSVParser {
 
 		setTaskSuccessors(plans.values());
 		return plans;
+	}
+
+	/**
+	 * Parse the delta values from a CSV file, and set for the set of plans
+	 * given as input
+	 * 
+	 * @param fname
+	 * @param plans
+	 * @throws ParseException
+	 * @throws IOException
+	 */
+	public static void parseDeltaValues(String fname, Map<Integer, Plan> plans) throws ParseException, IOException {
+
+		Reader in = new FileReader(fname);
+		Iterable<CSVRecord> records = CSVFormat.EXCEL.withFirstRecordAsHeader()
+				.withHeader(distanceFunctionCsvHeaders.class).parse(in);
+
+		// Iterate each record (line) of the CSV file
+		for (CSVRecord record : records) {
+			// Parse its attributes
+			int taskID = Integer.parseInt(record.get("taskID"));
+			int planID = Integer.parseInt(record.get("planID"));
+
+			if (!plans.containsKey(planID)) {
+				throw new IllegalArgumentException("plan #" + Integer.toString(planID) + " not found.");
+			}
+
+			try {
+				plans.get(planID).getTask(taskID);
+			} catch (NoSuchElementException e) {
+				throw new IllegalArgumentException(
+						"task " + Integer.toString(taskID) + " in plan #" + Integer.toString(planID) + " not found.");
+			}
+
+			String function = record.get("function");
+			String dt = record.get("dt");
+
+			switch (function.toUpperCase()) {
+			case "FIXED":
+				setFixedFunctionValues(plans.get(planID).getTask(taskID), dt);
+				break;
+			case "GAUSSIAN":
+				setGaussianFunctionValues(plans.get(planID).getTask(taskID), dt);
+				break;
+			case "USER":
+				setUserDefinedFunctionValues(plans.get(planID).getTask(taskID), dt);
+				break;
+			default:
+				throw new IllegalArgumentException("not recognized: " + function);
+			}
+
+		}
+	}
+
+	/**
+	 * 
+	 * @param task
+	 * @param valueField
+	 * @throws PatternSyntaxException
+	 */
+	private static void setUserDefinedFunctionValues(Task task, String valueField) throws PatternSyntaxException {
+		Map<Integer, Integer> valueMap = new HashMap<>();
+		for (int i = task.getReleaseTime(); i <= task.getDueDate(); i++) {
+			Expression e = new ExpressionBuilder(valueField).variables("pk", "t", "rk").build().setVariable("t", i)
+					.setVariable("pk", task.getProcessingTime()).setVariable("rk", task.getReleaseTime());
+			Double result = e.evaluate();
+			valueMap.putIfAbsent(i, result.intValue());
+		}
+
+		task.setDeltaValues(valueMap);
+	}
+
+	/**
+	 * 
+	 * @param task
+	 * @param valueField
+	 * @throws PatternSyntaxException
+	 */
+	private static void setGaussianFunctionValues(Task task, String valueField) throws PatternSyntaxException {
+
+		// String[] gaussianParameters = valueField.split("(\\,\\)");
+		// int sigma = Integer.parseInt(gaussianParameters[0]);
+		// int c = Integer.parseInt(gaussianParameters[1]);
+		Map<Integer, Integer> valueMap = new HashMap<>();
+
+		for (int i = task.getReleaseTime(); i <= task.getDueDate(); i++) {
+			valueMap.putIfAbsent(i, 0);
+			// TODO calcola gaussiana
+		}
+
+		task.setDeltaValues(valueMap);
+	}
+
+	/**
+	 * 
+	 * @param task
+	 * @param valueField
+	 * @throws PatternSyntaxException
+	 */
+	private static void setFixedFunctionValues(Task task, String valueField) throws PatternSyntaxException {
+		List<String> usagesParResource = Arrays.asList(valueField.trim().split(";")).stream()
+				.collect(Collectors.toList());
+		Map<Integer, Integer> valueMap = new HashMap<>();
+
+		for (int i = task.getReleaseTime(); i <= task.getDueDate(); i++) {
+			valueMap.putIfAbsent(i, 0);
+		}
+
+		for (String ru : usagesParResource) {
+			if (ru.equals("")) {
+				continue;
+			}
+
+			// Try to parse the current string as 't, v'
+			String[] parts = ru.replaceAll("[\\(\\)]", "").split(",");
+
+			if (parts.length != 2) {
+				throw new PatternSyntaxException(ru, ru, 0);
+			}
+			int t = Integer.parseInt(parts[0]);
+			int v = Integer.parseInt(parts[1]);
+			valueMap.put(t, v);
+		}
+		task.setDeltaValues(valueMap);
+		// TODO QUI va un task.setQUALCOSA(valueMap);
 	}
 
 	/**

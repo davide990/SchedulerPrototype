@@ -2,29 +2,30 @@ package org.lip6.scheduler;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 public class TaskImpl extends ExecutableNode implements Cloneable, Task {
+
+	// Constant C and k are used by ludovic for calculating the processing
+	// time...
+	int C;
+	final int k = 1;
 
 	final int taskID;
 	final int planID;
 	final String planName;
 	final int releaseTime;
 	final int dueDate;
-
-	// PROCESSING TIME NOT FINAL!
-	int processingTime;
-
+	final int processingTime;
 	final int planPriority;
+	final int timeLag;
 	final List<Integer> predecessors;
 	final List<Integer> successors;
 	final Map<Integer, Integer> resourceUsages;
-	final int timeLag;
+	final Map<Integer, Integer> delta;
 
 	TaskImpl(int taskID, int planID, Map<Integer, Integer> resourceUsages, int timeLag, int releaseTime, int dueDate,
 			int processingTime, int planPriority, List<Integer> predecessors) {
@@ -39,7 +40,10 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 		this.successors = new ArrayList<>();
 		this.timeLag = timeLag;
 		this.planName = "";
-		processingTimeFunction = Optional.empty();
+		this.delta = new HashMap<>();
+		for (int t = releaseTime; t <= dueDate; t++) {
+			delta.put(t, 0);
+		}
 	}
 
 	TaskImpl(int taskID, int planID, String planName, Map<Integer, Integer> resourceUsages, int timeLag,
@@ -55,7 +59,17 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 		this.successors = new ArrayList<>();
 		this.planName = planName;
 		this.timeLag = timeLag;
-		processingTimeFunction = Optional.empty();
+		this.delta = new HashMap<>();
+		for (int t = releaseTime; t <= dueDate; t++) {
+			delta.put(t, 0);
+		}
+	}
+
+	@Override
+	public void setDeltaValues(Map<Integer, Integer> values) {
+		for (Integer t : values.keySet()) {
+			delta.put(t, values.get(t));
+		}
 	}
 
 	@Override
@@ -64,11 +78,6 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 				processingTime, planPriority, predecessors);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see org.lip6.scheduler.Task#getTaskID()
-	 */
 	@Override
 	public int getID() {
 		return taskID;
@@ -79,31 +88,16 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 		return resourceUsages;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see org.lip6.scheduler.Task#getPlanID()
-	 */
 	@Override
 	public int getPlanID() {
 		return planID;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see org.lip6.scheduler.Task#getPlanName()
-	 */
 	@Override
 	public String getPlanName() {
 		return planName;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see org.lip6.scheduler.Task#getReleaseTime()
-	 */
 	@Override
 	public int getReleaseTime() {
 		return releaseTime;
@@ -114,21 +108,16 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 		return dueDate;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see org.lip6.scheduler.Task#getProcessingTime()
-	 */
 	@Override
 	public int getProcessingTime() {
 		return processingTime;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see org.lip6.scheduler.Task#getPredecessors()
-	 */
+	@Override
+	public int getProcessingTime(int t) {
+		return k * delta.get(t) + processingTime;
+	}
+
 	@Override
 	public List<Integer> getPredecessors() {
 		return Collections.unmodifiableList(predecessors);
@@ -159,22 +148,6 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 	@Override
 	public int getPlanPriority() {
 		return planPriority;
-	}
-
-	Optional<BiFunction<Integer, Integer, Integer>> processingTimeFunction;
-
-	@Override
-	public void setProcessingTimeFunction(BiFunction<Integer, Integer, Integer> func) {
-		Objects.requireNonNull(func);
-		processingTimeFunction = Optional.of(func);
-	}
-
-	@Override
-	public void updateProcessingTime(int currentTimeInstant) {
-		if (!processingTimeFunction.isPresent()) {
-			return;
-		}
-		processingTime = processingTimeFunction.get().apply(currentTimeInstant, processingTime);
 	}
 
 	@Override
@@ -247,6 +220,11 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 	@Override
 	public int getLag() {
 		return timeLag;
+	}
+
+	@Override
+	public Map<Integer, Integer> deltaValues() {
+		return Collections.unmodifiableMap(delta);
 	}
 
 }
