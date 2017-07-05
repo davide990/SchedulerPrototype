@@ -41,8 +41,8 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 		this.timeLag = timeLag;
 		this.planName = "";
 		this.delta = new HashMap<>();
-		for (int t = releaseTime; t <= dueDate; t++) {
-			delta.put(t, 0);
+		for(int i=releaseTime;i<=dueDate;i++){
+			delta.put(i, 0);
 		}
 	}
 
@@ -60,8 +60,8 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 		this.planName = planName;
 		this.timeLag = timeLag;
 		this.delta = new HashMap<>();
-		for (int t = releaseTime; t <= dueDate; t++) {
-			delta.put(t, 0);
+		for(int i=releaseTime;i<=dueDate;i++){
+			delta.put(i, 0);
 		}
 	}
 
@@ -74,8 +74,10 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 
 	@Override
 	public Object clone() {
-		return TaskFactory.getTask(taskID, planID, planName, resourceUsages, timeLag, releaseTime, dueDate,
+		Task t = TaskFactory.getTask(taskID, planID, planName, resourceUsages, timeLag, releaseTime, dueDate,
 				processingTime, planPriority, predecessors);
+		t.setDeltaValues(delta);
+		return t;
 	}
 
 	@Override
@@ -115,7 +117,7 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 
 	@Override
 	public int getProcessingTime(int t) {
-		return k * delta.get(t) + processingTime;
+		return Math.max(k * delta.get(t) + processingTime, 1);
 	}
 
 	@Override

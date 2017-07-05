@@ -196,7 +196,8 @@ public class Scheduler {
 	 * @return
 	 */
 	public List<Plan> getPlans() {
-		return Collections.unmodifiableList(plans);
+		// return Collections.unmodifiableList(plans);
+		return plans;
 	}
 
 	/**
@@ -350,7 +351,6 @@ public class Scheduler {
 					workingSolution.unSchedule(toRemove);
 				}
 
-				
 				toSchedule.removeAll(unscheduled);
 				scheduledPlans.addAll(toSchedule);
 
@@ -378,13 +378,10 @@ public class Scheduler {
 			}
 		}
 
-		//events.forEach(x -> System.err.println(x));
+		events.forEach(x -> System.err.println(x));
 
 		unscheduledPlans = new TreeList<>(plans);
 		unscheduledPlans.removeAll(scheduledPlans);
-
-		
-		System.out.println("Scheduled plans: " + Integer.toString(scheduledPlans.size()));
 
 		return lastFeasibleSolution;
 	}
@@ -606,17 +603,17 @@ public class Scheduler {
 		if (!events.contains(e)) {
 			events.add(e);
 		}
-		if (e.getTimeInstant() + t.getProcessingTime() == f.getTimeInstant()) {
+		if (e.getTimeInstant() + t.getProcessingTime(e.getTimeInstant()) == f.getTimeInstant()) {
 			f.addToC(t);
-		} else if (e.getTimeInstant() + t.getProcessingTime() > f.getTimeInstant()) {
-			Event newEvent = Event.get(e.getTimeInstant() + t.getProcessingTime(), resourcesIDs);
+		} else if (e.getTimeInstant() + t.getProcessingTime(e.getTimeInstant()) > f.getTimeInstant()) {
+			Event newEvent = Event.get(e.getTimeInstant() + t.getProcessingTime(e.getTimeInstant()), resourcesIDs);
 			newEvent.setResourceCapacities(f.resourceUsages());
 			f.addToC(t);
 			events.add(newEvent);
 			f = newEvent;
 		} else {
 			Event predf = EventUtils.getPreviousEvent(f, events).get();
-			Event newEvent = Event.get(e.getTimeInstant() + t.getProcessingTime(), resourcesIDs);
+			Event newEvent = Event.get(e.getTimeInstant() + t.getProcessingTime(e.getTimeInstant()), resourcesIDs);
 			newEvent.setResourceCapacities(predf.resourceUsages());
 			newEvent.addToC(t);
 			events.add(newEvent);
@@ -630,6 +627,11 @@ public class Scheduler {
 				resources.forEach(res -> ev.increaseResourceUsage(res));
 			}
 		}
+
+		if (t.getID() == 1 && t.getPlanID() == 1) {
+			System.out.println("");
+		}
+
 		return true;
 	}
 
@@ -763,11 +765,11 @@ public class Scheduler {
 
 			// Checks for the accomplishment date to be inside the temporal
 			// window [Ws,We]
-			Utils.requireValidBounds(startingTime + t.getProcessingTime(), Ws, We,
+			Utils.requireValidBounds(startingTime + t.getProcessingTime(startingTime), Ws, We,
 					"for " + t.toString() + ", sk=" + Integer.toString(startingTime) + ",pk="
 							+ Integer.toString(t.getProcessingTime()) + ": accomplishment date "
-							+ Integer.toString(startingTime + t.getProcessingTime()) + " not in window [" + Ws + ","
-							+ We + "]");
+							+ Integer.toString(startingTime + t.getProcessingTime(startingTime)) + " not in window ["
+							+ Ws + "," + We + "]");
 		} catch (IllegalArgumentException e) {
 			// System.err.println(e.getMessage());
 			return false;

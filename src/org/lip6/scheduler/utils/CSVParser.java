@@ -14,12 +14,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.lang3.NotImplementedException;
 import org.lip6.scheduler.Plan;
 import org.lip6.scheduler.PlanImpl;
 import org.lip6.scheduler.Task;
@@ -106,9 +108,18 @@ public class CSVParser {
 	 * @throws ParseException
 	 * @throws IOException
 	 */
-	public static void parseDeltaValues(String fname, Map<Integer, Plan> plans) throws ParseException, IOException {
-
+	public static void parseDeltaValues(String fname, List<Plan> plans) throws ParseException, IOException {
 		Reader in = new FileReader(fname);
+		parseDeltaValuesAux(in, plans);
+	}
+	
+	public static void parseDeltaValues(InputStream is, List<Plan> plans) throws ParseException, IOException {
+		parseDeltaValuesAux(new InputStreamReader(is), plans);
+	}
+
+	public static void parseDeltaValuesAux(Reader in, List<Plan> plans) throws ParseException, IOException {
+
+		//Reader in = new FileReader(fname);
 		Iterable<CSVRecord> records = CSVFormat.EXCEL.withFirstRecordAsHeader()
 				.withHeader(distanceFunctionCsvHeaders.class).parse(in);
 
@@ -118,12 +129,15 @@ public class CSVParser {
 			int taskID = Integer.parseInt(record.get("taskID"));
 			int planID = Integer.parseInt(record.get("planID"));
 
-			if (!plans.containsKey(planID)) {
+			Optional<Plan> planOpt = plans.stream().filter(p -> p.getID() == planID).findFirst();
+			if (!planOpt.isPresent()) {
 				throw new IllegalArgumentException("plan #" + Integer.toString(planID) + " not found.");
 			}
 
+			Plan plan = planOpt.get();
+
 			try {
-				plans.get(planID).getTask(taskID);
+				plan.getTask(taskID);
 			} catch (NoSuchElementException e) {
 				throw new IllegalArgumentException(
 						"task " + Integer.toString(taskID) + " in plan #" + Integer.toString(planID) + " not found.");
@@ -134,13 +148,13 @@ public class CSVParser {
 
 			switch (function.toUpperCase()) {
 			case "FIXED":
-				setFixedFunctionValues(plans.get(planID).getTask(taskID), dt);
+				setFixedFunctionValues(plan.getTask(taskID), dt);
 				break;
 			case "GAUSSIAN":
-				setGaussianFunctionValues(plans.get(planID).getTask(taskID), dt);
+				setGaussianFunctionValues(plan.getTask(taskID), dt);
 				break;
 			case "USER":
-				setUserDefinedFunctionValues(plans.get(planID).getTask(taskID), dt);
+				setUserDefinedFunctionValues(plan.getTask(taskID), dt);
 				break;
 			default:
 				throw new IllegalArgumentException("not recognized: " + function);
@@ -174,18 +188,18 @@ public class CSVParser {
 	 * @throws PatternSyntaxException
 	 */
 	private static void setGaussianFunctionValues(Task task, String valueField) throws PatternSyntaxException {
-
-		// String[] gaussianParameters = valueField.split("(\\,\\)");
-		// int sigma = Integer.parseInt(gaussianParameters[0]);
-		// int c = Integer.parseInt(gaussianParameters[1]);
-		Map<Integer, Integer> valueMap = new HashMap<>();
-
-		for (int i = task.getReleaseTime(); i <= task.getDueDate(); i++) {
-			valueMap.putIfAbsent(i, 0);
-			// TODO calcola gaussiana
-		}
-
-		task.setDeltaValues(valueMap);
+		throw new NotImplementedException("Not implemented yet!");
+		/*
+		 * // String[] gaussianParameters = valueField.split("(\\,\\)"); // int
+		 * sigma = Integer.parseInt(gaussianParameters[0]); // int c =
+		 * Integer.parseInt(gaussianParameters[1]); Map<Integer, Integer>
+		 * valueMap = new HashMap<>();
+		 * 
+		 * for (int i = task.getReleaseTime(); i <= task.getDueDate(); i++) {
+		 * valueMap.putIfAbsent(i, 0); // TODO calcola gaussiana }
+		 * 
+		 * task.setDeltaValues(valueMap);
+		 */
 	}
 
 	/**
