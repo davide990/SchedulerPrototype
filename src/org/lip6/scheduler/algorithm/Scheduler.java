@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.list.TreeList;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.lip6.graph.GraphUtils;
 import org.lip6.graph.TopologicalSorting;
 import org.lip6.scheduler.ExecutableNode;
 import org.lip6.scheduler.Plan;
@@ -287,6 +288,8 @@ public class Scheduler {
 		// according to their priority value
 		plansInput = sortPlans(plansInput.stream().map(x -> (ExecutableNode) x).collect(Collectors.toList()));
 
+		// GraphUtils.graphToDot(plansInput, "/home/davide/out5.dot");
+
 		// Why a TreeList here? Because it provides better performance in
 		// add/remove operations compared to ArrayList. Add/remove operations
 		// takes
@@ -347,6 +350,10 @@ public class Scheduler {
 					workingSolution.unSchedule(toRemove);
 				}
 
+				
+				toSchedule.removeAll(unscheduled);
+				scheduledPlans.addAll(toSchedule);
+
 				plansWithSamePriority.remove(pk.getPriority());
 				try {
 					lastFeasibleSolution = (Schedule) workingSolution.clone();
@@ -375,7 +382,10 @@ public class Scheduler {
 
 		unscheduledPlans = new TreeList<>(plans);
 		unscheduledPlans.removeAll(scheduledPlans);
-				
+
+		
+		System.out.println("Scheduled plans: " + Integer.toString(scheduledPlans.size()));
+
 		return lastFeasibleSolution;
 	}
 
@@ -534,9 +544,9 @@ public class Scheduler {
 		// Calculate the earliest starting time for the task
 		int sk = getInitialStartingTime(s.getWStart(), events, t);
 		Event e = getEvent(sk, events);
-		if (!events.contains(e)) {
-			events.add(e);
-		}
+		/*
+		 * if (!events.contains(e)) { events.add(e); }
+		 */
 
 		Event f = e;
 		Event g = f;
@@ -589,8 +599,13 @@ public class Scheduler {
 		// Add to schedule
 		s.addTask(e.getTimeInstant(), t);
 
-		// Update the events list
+		// Add to S(e)
 		e.addToS(t);
+
+		// Update the events list
+		if (!events.contains(e)) {
+			events.add(e);
+		}
 		if (e.getTimeInstant() + t.getProcessingTime() == f.getTimeInstant()) {
 			f.addToC(t);
 		} else if (e.getTimeInstant() + t.getProcessingTime() > f.getTimeInstant()) {
