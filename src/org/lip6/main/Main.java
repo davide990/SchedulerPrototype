@@ -2,50 +2,72 @@ package org.lip6.main;
 
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.HashMap;
-import java.util.Map;
 
-import org.lip6.scheduler.Plan;
-import org.lip6.scheduler.Task;
 import org.lip6.scheduler.algorithm.Scheduler;
 import org.lip6.scheduler.algorithm.SchedulerFactory;
 import org.lip6.scheduler.utils.CSVParser;
 
+/**
+ * Usage (from command line):<br/>
+ * ⇢Scheduler [PlanSetCSV] <br/>
+ * ⇢Scheduler [Ws] [We] [PlanSetCSV]<br/>
+ * ⇢Scheduler [Ws] [We] [MaxResCapacity] [PlanSetCSV]<br/>
+ * ⇢Scheduler [Ws] [We] [MaxResCapacity] [PlanSetCSV]
+ * [ProcessingTimeFunctionCSV]<br/>
+ * 
+ * @author <a href="mailto:davide-andrea.guastella@lip6.fr">Davide Andrea
+ *         Guastella</a>
+ *
+ */
 public class Main {
 
 	public static void main(String[] args) {
 
-		// String filename = "/home/davide/scenario_5.csv";
-		//String filename = "/home/davide/test_case_2.csv";
-		 String filename = "/home/davide/paper_plans_nouveau.csv";
-		int WStart = 1;
-		int WEnd = 200;
+		int WStart = 0;
+		int WEnd = 180;
 		int maxResourceCapacity = 1;
+		String planSetFileName = "";
+		String processingTimeFuncFileName = "";
 
-		Scheduler sc = SchedulerFactory.getFromFile(maxResourceCapacity, WStart, WEnd, filename);
+		if (args.length == 1) {
+			planSetFileName = args[0];
+		} else if (args.length == 3) {
+			WStart = Integer.parseInt(args[0]);
+			WEnd = Integer.parseInt(args[1]);
+			planSetFileName = args[2];
+		} else if (args.length == 4) {
+			WStart = Integer.parseInt(args[0]);
+			WEnd = Integer.parseInt(args[1]);
+			maxResourceCapacity = Integer.parseInt(args[2]);
+			planSetFileName = args[3];
+		} else if (args.length == 5) {
+			WStart = Integer.parseInt(args[0]);
+			WEnd = Integer.parseInt(args[1]);
+			maxResourceCapacity = Integer.parseInt(args[2]);
+			planSetFileName = args[3];
+			processingTimeFuncFileName = args[4];
+		} else {
+			System.err.println(
+					"Usage:\n⇢Scheduler [PlanSetCSV] \n⇢Scheduler [Ws] [We] [PlanSetCSV]\n⇢Scheduler [Ws] [We] [MaxResCapacity] [PlanSetCSV]\n⇢Scheduler [Ws] [We] [MaxResCapacity] [PlanSetCSV] [ProcessingTimeFunctionCSV]");
+			return;
+		}
 
-		/*try {
-			CSVParser.parseDeltaValues("/home/davide/paper_plans_nouveau_dt.csv", sc.getPlans());
-		} catch (ParseException | IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}*/
+		Scheduler sc = SchedulerFactory.getFromFile(maxResourceCapacity, WStart, WEnd, planSetFileName);
+
+		if (!processingTimeFuncFileName.equals("")) {
+			try {
+				CSVParser.parseDeltaValues("/home/davide/paper_plans_nouveau_dt.csv", sc.getPlans());
+			} catch (ParseException | IOException e) {
+				e.printStackTrace();
+			}
+		}
 
 		long startTime = System.currentTimeMillis();
 		sc.buildSchedule();
 		long endTime = System.currentTimeMillis();
 		long result = endTime - startTime;
 
-		
-		/*Task t11 = sc.getPlans().stream().filter(x->x.getID()==1).findFirst().get().getTask(1);
-
-		for (Integer t : t11.deltaValues().keySet()) {
-			System.out.println("p(" + Integer.toString(t) + ") = " + Integer.toString(t11.getProcessingTime(t)));
-		}*/
-		
-		
-		System.err.println("---> " + Long.toString(result) + "ms");
-
+		System.err.println("Execution time: #" + Long.toString(result) + "ms");
 	}
 
 }

@@ -18,7 +18,6 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.list.TreeList;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.lip6.graph.GraphUtils;
 import org.lip6.graph.TopologicalSorting;
 import org.lip6.scheduler.ExecutableNode;
 import org.lip6.scheduler.Plan;
@@ -378,8 +377,7 @@ public class Scheduler {
 			}
 		}
 
-		events.forEach(x -> System.err.println(x));
-
+		// events.forEach(x -> System.err.println(x));
 		unscheduledPlans = new TreeList<>(plans);
 		unscheduledPlans.removeAll(scheduledPlans);
 
