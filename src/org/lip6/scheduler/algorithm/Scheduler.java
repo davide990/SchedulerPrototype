@@ -155,10 +155,7 @@ public class Scheduler {
 		// retrieve the IDs of the resources
 		for (Plan p : plans) {
 			scheduler.resourcesIDs.addAll(p.getTasks().stream().flatMap(x -> x.getResourcesID().stream()).distinct()
-					.collect(Collectors.toList())); // map(x ->
-													// x.getResourceID()).collect(Collectors.toList()));
-			// .addAll(p.getTasks().stream().map(x ->
-			// x.getResourceID()).collect(Collectors.toList()));
+					.collect(Collectors.toList()));
 		}
 
 		// Create two events for Ws and We
@@ -288,8 +285,6 @@ public class Scheduler {
 		// according to their priority value
 		plansInput = sortPlans(plansInput.stream().map(x -> (ExecutableNode) x).collect(Collectors.toList()));
 
-		// GraphUtils.graphToDot(plansInput, "/home/davide/out5.dot");
-
 		// Why a TreeList here? Because it provides better performance in
 		// add/remove operations compared to ArrayList. Add/remove operations
 		// takes
@@ -298,7 +293,10 @@ public class Scheduler {
 		plansInput.forEach(x -> {
 			plansWithSamePriority.putIfAbsent(x.getPriority(), new TreeList<>());
 			plansWithSamePriority.get(x.getPriority()).add(x);
-
+		});
+		Map<Integer, Integer> numPlansWithSamePriority = new HashMap<>();
+		plansWithSamePriority.keySet().forEach(k -> {
+			numPlansWithSamePriority.put(k, plansWithSamePriority.get(k).size());
 		});
 
 		// Main loop. Iterate until there is some plan left to schedule
@@ -312,7 +310,7 @@ public class Scheduler {
 
 			// If pk is the only, in the plan set, to have its priority value,
 			// then proceed by scheduling it
-			if (plansWithSamePriority.get(pk.getPriority()).size() == 1) {
+			if (numPlansWithSamePriority.get(pk.getPriority()) == 1) {
 				// Schedule pk
 				boolean scheduled = schedulePlan(pk, workingSolution, events, maxResourceCapacity);
 				// If pk has been scheduled

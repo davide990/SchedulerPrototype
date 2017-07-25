@@ -67,6 +67,11 @@ public class Main {
 		long endTime = System.currentTimeMillis();
 		long result = endTime - startTime;
 
+		System.err.println("Scheduled: " + Integer.toString(sc.getScheduledPlans().size()));
+
+		int scheduledTasks = sc.getScheduledPlans().stream().mapToInt(x-> x.getNumberOfTasks()).sum();
+		
+		System.err.println("Scheduled Tasks: " + Integer.toString(scheduledTasks));
 		System.err.println("Execution time: #" + Long.toString(result) + "ms");
 	}
 
