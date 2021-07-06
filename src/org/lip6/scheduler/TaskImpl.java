@@ -24,7 +24,7 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 	final List<Integer> predecessors;
 	final List<Integer> successors;
 
-	TaskImpl(int taskID, int planID, int resourceID, int resourceUsage, int releaseTime, int dueDate,
+	protected TaskImpl(int taskID, int planID, int resourceID, int resourceUsage, int releaseTime, int dueDate,
 			int processingTime, int planPriority, List<Integer> predecessors) {
 		this.taskID = taskID;
 		this.planID = planID;
@@ -40,7 +40,7 @@ public class TaskImpl extends ExecutableNode implements Cloneable, Task {
 		processingTimeFunction = Optional.empty();
 	}
 
-	TaskImpl(int taskID, int planID, String planName, int resourceID, int resourceUsage, int releaseTime, int dueDate,
+	protected TaskImpl(int taskID, int planID, String planName, int resourceID, int resourceUsage, int releaseTime, int dueDate,
 			int processingTime, int planPriority, List<Integer> predecessors) {
 		this.taskID = taskID;
 		this.planID = planID;

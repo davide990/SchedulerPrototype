@@ -35,10 +35,10 @@ import org.lip6.scheduler.utils.Utils;
 public class Scheduler {
 
 	/**
-	 * A listener for the scheduler. When a feasible solution is found, the
-	 * listener is invoked.
+	 * A listener for the scheduler. When a feasible solution is found, the listener
+	 * is invoked.
 	 */
-	private Optional<SchedulerListener> listener;
+	Optional<SchedulerListener> listener;
 	/**
 	 * The set of <b>all</b> plans.
 	 */
@@ -46,7 +46,7 @@ public class Scheduler {
 	/**
 	 * The IDs of all the resources employed by the plans.
 	 */
-	private Set<Integer> resourcesIDs;
+	Set<Integer> resourcesIDs;
 	/**
 	 * The set of scheduled plans.
 	 */
@@ -58,27 +58,27 @@ public class Scheduler {
 	/**
 	 * The set of events
 	 */
-	private TreeSet<Event> events;
+	TreeSet<Event> events;
 	/**
 	 * The maximum allowed capacity of each resource
 	 */
-	private int maxResourceCapacity;
-	private int wStart;
+	int maxResourceCapacity;
+	int wStart;
 	/**
 	 * The start time instant of the temporal window
 	 */
-	private int wEnd;
+	int wEnd;
 
 	/**
-	 * If true, the optimal We for the scheduling is calculated. This is useful
-	 * when the user doesn't know which value of We to choose.
+	 * If true, the optimal We for the scheduling is calculated. This is useful when
+	 * the user doesn't know which value of We to choose.
 	 */
 	private boolean calculateOptimalWe;
 
 	/**
 	 * Constructor for the Scheduler class
 	 */
-	private Scheduler() {
+	protected Scheduler() {
 		listener = Optional.empty();
 		plans = new HashSet<>();
 		scheduledPlans = new HashSet<>();
@@ -88,81 +88,12 @@ public class Scheduler {
 		calculateOptimalWe = false;
 	}
 
-	/**
-	 * Static factory method for Scheduler. It returns a new instance of
-	 * Scheduler class
-	 * 
-	 * @param maxResourceCapacity
-	 *            the maximum capacity of all the resources
-	 * @param plans
-	 *            the set of plans to scheduler
-	 * @param wStart
-	 *            the starting time of the temporal window
-	 * @param wEnd
-	 *            the final time of the temporal window
-	 * @param listener
-	 *            a listener that is invoked each time a <b>feasible
-	 *            solution</b> is constructed
-	 * @return
-	 */
-	public static Scheduler get(final int maxResourceCapacity, Set<Plan> plans, int wStart, int wEnd,
-			SchedulerListener listener) {
-		Scheduler scheduler = get(maxResourceCapacity, plans, wStart, wEnd);
-		scheduler.listener = Optional.of(listener);
-		return scheduler;
-	}
-
 	public boolean isCalculateOptimalWe() {
 		return calculateOptimalWe;
 	}
 
 	public void setCalculateOptimalWe(boolean calculateOptimalWe) {
 		this.calculateOptimalWe = calculateOptimalWe;
-	}
-
-	/**
-	 * Static factory method for Scheduler. It returns a new instance of
-	 * Scheduler class
-	 * 
-	 * @param maxResourceCapacity
-	 *            the maximum capacity of all the resources
-	 * @param plans
-	 *            the set of plans to scheduler
-	 * @param wStart
-	 *            the starting time of the temporal window
-	 * @param wEnd
-	 *            the final time of the temporal window
-	 * @return
-	 */
-	public static Scheduler get(final int maxResourceCapacity, Set<Plan> plans, int wStart, int wEnd) {
-		// Check if the resource capacity value is > 0
-		Utils.requireValidBounds(maxResourceCapacity, 1, Integer.MAX_VALUE,
-				"Maximum resource capacity must be a positive integer value.");
-
-		// Check if the temporal window is valid
-		if (wEnd <= wStart) {
-			throw new IllegalArgumentException(
-					"Invalid temporal window [" + Integer.toString(wStart) + "," + Integer.toString(wEnd) + "]");
-		}
-
-		// Create a new scheduler
-		Scheduler scheduler = new Scheduler();
-		scheduler.maxResourceCapacity = maxResourceCapacity;
-		scheduler.wStart = wStart;
-		scheduler.wEnd = wEnd;
-		scheduler.plans.addAll(plans);
-
-		// retrieve the IDs of the resources
-		for (Plan p : plans) {
-			scheduler.resourcesIDs
-					.addAll(p.getTasks().stream().map(x -> x.getResourceID()).collect(Collectors.toList()));
-		}
-
-		// Create two events for Ws and We
-		scheduler.events.add(Event.get(wStart, scheduler.resourcesIDs));
-		scheduler.events.add(Event.get(wEnd, scheduler.resourcesIDs));
-
-		return scheduler;
 	}
 
 	/**
@@ -176,7 +107,7 @@ public class Scheduler {
 		events.clear();
 	}
 
-	public void addPlans(List<Plan> plans) {
+	public void addPlans(Set<Plan> plans) {
 		this.plans.addAll(plans);
 		for (Plan p : plans) {
 			resourcesIDs.addAll(p.getTasks().stream().map(x -> x.getResourceID()).collect(Collectors.toList()));
@@ -396,20 +327,17 @@ public class Scheduler {
 	}
 
 	/**
-	 * <b>ALGORITHM 3</b> Schedule a set of plans that have the same priority
-	 * value. <br/>
+	 * <b>ALGORITHM 3</b> Schedule a set of plans that have the same priority value.
+	 * <br/>
 	 * The plans are scheduled in order to minimize the idle time. An idle time
-	 * occurs when between the accomplishment date of a task and the starting
-	 * time of its successor, a task can be placed.
+	 * occurs when between the accomplishment date of a task and the starting time
+	 * of its successor, a task can be placed.
 	 * 
-	 * @param plans
-	 *            the set of plans to schedule
-	 * @param workingSolution
-	 *            the working solution where to schedule the plans
-	 * @param events
-	 *            the set of events used to schedule the plans
-	 * @param maxResourceCapacity
-	 *            the maximum allowed resource capacity (for each resource)
+	 * @param plans               the set of plans to schedule
+	 * @param workingSolution     the working solution where to schedule the plans
+	 * @param events              the set of events used to schedule the plans
+	 * @param maxResourceCapacity the maximum allowed resource capacity (for each
+	 *                            resource)
 	 * @return the list of <b>unscheduled</b> plans
 	 */
 	public List<Plan> schedulePlanSet(final List<Plan> plans, Schedule workingSolution, TreeSet<Event> events,
@@ -745,9 +673,9 @@ public class Scheduler {
 	}
 
 	/**
-	 * Get the latest event <i>e</i> that precedes <i>s<sub>k</sub></i> and
-	 * contains in <i>C(e)</i> a task scheduled in the same resource as the task
-	 * <i>t</i> given in input
+	 * Get the latest event <i>e</i> that precedes <i>s<sub>k</sub></i> and contains
+	 * in <i>C(e)</i> a task scheduled in the same resource as the task <i>t</i>
+	 * given in input
 	 * 
 	 * @param t
 	 * @param sk
@@ -772,8 +700,8 @@ public class Scheduler {
 
 	/**
 	 * Calculate the initial starting time s<sub>k</sub> for a task t. It is the
-	 * maximum between W<sub>s</sub>, r<sub>k</sub> and the latest completion
-	 * time of the predecessors of t
+	 * maximum between W<sub>s</sub>, r<sub>k</sub> and the latest completion time
+	 * of the predecessors of t
 	 * 
 	 * @param Ws
 	 * @param events
@@ -805,11 +733,10 @@ public class Scheduler {
 	};
 
 	/**
-	 * <b>ALGORITHM 5</b> Sort plans according to their topological order and
-	 * then according to their priority value
+	 * <b>ALGORITHM 5</b> Sort plans according to their topological order and then
+	 * according to their priority value
 	 * 
-	 * @param plans
-	 *            the set of plans to sort.
+	 * @param plans the set of plans to sort.
 	 * @return the sorted set of plans
 	 */
 	private List<Plan> sortPlans(final List<ExecutableNode> plans) {
@@ -882,10 +809,8 @@ public class Scheduler {
 	 * Check if the given task's predecessors are already scheduled in the given
 	 * solution
 	 * 
-	 * @param s
-	 *            the solution to be checked
-	 * @param t
-	 *            the task which precedences are to be checked
+	 * @param s the solution to be checked
+	 * @param t the task which precedences are to be checked
 	 * @return <b>true</b> if all the predecessors of t are scheduled in s,
 	 *         <b>false</b> otherwise
 	 */
